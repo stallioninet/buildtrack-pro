@@ -1,0 +1,640 @@
+  1. Run npm install
+  2. Run npm start
+  3. If you want, I can add import-from-JSON and better enclosed-room detection
+     for multiple rooms next.
+===
+
+  1. Run npm install
+  2. Run npm start
+  3. If you want, I can add import-from-JSON and better enclosed-room detection
+     for multiple rooms next.
+
+
+--
+We have been making the site afresh from the new theme provided by you.
+Since the codebase which we used to work on has become obsolete after many years, we have to fully code the features in the new site.
+
+All the pages of the site has been done (as per the menu navigation).
+
+
+---
+Client Management & Time Tracking System – Accounting Practice
+
+Purpose:
+   To design and develop a streamlined web-based software solution 
+   that centralizes client information and billable time tracking for
+   an accounting practice.
+
+   The first release will focus strictly on essential functionality:
+      a. Structured client management 
+      b. Accurate time logging 
+      c. Basic reporting/export. 
+   
+   The architecture will be modular and extensible, allowing future
+   enhancements (background tracking, advanced timesheets, billing
+   automation) without refactoring core logic.
+
+
+Recommended stack:
+ 1. Backend
+      a. Laravel (PHP) for rapid structured development
+ 2. Frontend
+     Laravel Blade
+ 3. Database
+      MySQL
+ 4. Authentication
+      Secure session-based authentication
+      Role-based access control
+      
+      
+Scope of Work
+   1. Client Management Module
+      a. Client profile creation (full contact details)
+      b. Interaction log (notes, history)
+      c. Appointment scheduling (calendar view)
+      d. Search and filter clients
+      e. Status tracking (active/inactive)
+
+      Deliverable: CRM-style client dashboard.
+
+2. Time Tracking Module
+    a. Start/stop timer functionality
+    b. Manual time entry option
+    c. Automatic client linking
+    d. Description/notes per entry
+    e. Date-based organization
+    f. Editable entries (with audit trail)
+
+    Deliverable: Accurate time log system linked to client records.
+
+3. Dashboard & Reporting
+   a. Summary view:
+       - Total hours per client
+       - Total hours per date range
+   b. Filter by:
+          Client, Date
+   c. Export options: CSV and PDF
+   
+   Deliverable: Clear reporting interface for billing preparation.
+
+4. Authentication & Roles
+    a. Secure login system
+    b. Role-based access (Admin / Staff)
+    c. Password encryption
+    d. Session management
+   Deliverable: Secure multi-user access structure.
+
+5. Architecture for Future Expansion
+   Prepared for:
+       Automatic background time tracking
+       Advanced timesheet customization
+       Invoice generation
+       Client portal
+       API integrations
+
+   Note: Code will follow modular separation of concerns to allow
+         feature expansion without structural disruption.
+
+Deliverables
+  a. Fully functional web application
+  b. Client management module
+  c. Time tracking module
+  d. Dashboard & reporting system
+  e. CSV and PDF export
+  f. Role-based authentication
+  g. Deployment to hosting
+  h. Technical documentation and handover.
+  
+  Total time required: 2 months 
+
+
+
+
+
+------------------------------------------------------------------
+Shopify Fashion Store – Bold & Vibrant Custom Theme Design
+
+To design and implement a bold, high-energy Shopify storefront for a fashion and apparel brand, delivering a visually striking yet conversion-focused shopping experience.
+
+The objective is to create a vibrant, brand-led design that reflects creativity and confidence while maintaining strong UX principles, mobile responsiveness, and performance optimisation.
+
+
+Scope of Work
+1. Visual Identity & Design Direction
+    a. Bold color application aligned to brand palette
+    b. High-impact hero sections
+    c. Strong typography hierarchy
+    d. Fashion-led imagery layout
+    e. Clean spacing to avoid visual clutter
+
+   Design will balance vibrancy with clarity to guide visitors toward
+   purchase.
+
+2. Homepage Layout
+    a. Dynamic hero section
+    b. Featured collections
+    c. Product highlights
+    d. Review highlights
+    e. Instagram integration (if approved)
+
+3. Product Page Features
+    a. Product zoom on hover (desktop)
+    b. Smooth mobile zoom interaction
+    c. Structured product description layout
+    d. Customer reviews integration
+    e. Clear add-to-cart emphasis
+
+4. Customer Reviews Integration
+    Options:
+        Shopify native reviews
+    Third-party review app (if required)
+    Features:
+       - Review summary display
+       - Star ratings on collection pages
+    Structured placement for trust building
+
+5. Instagram Feed Integration (Optional)
+     a. Live feed integration
+     b. Mobile-optimised layout
+     c. Performance-safe implementation
+     d. Optional shoppable tagging (future-ready)
+
+6. Performance & Responsiveness
+    a. Fully responsive across devices
+    b. Optimised images
+    c. Script minimisation
+    d. Core Web Vitals alignment
+
+
+Estimated time required: 4 weeks 
+
+==========================================================
+With Love – Web Build & UI Enhancement
+
+Purpose: 
+  To build and refine With Love, GLDS’s first Universal Decision 
+  Tool—a lightweight multimedia greeting product designed to create
+  meaningful, interactive moments in under a minute.
+
+  The objective is to take the existing Replit prototype and evolve 
+  it into a production-ready web application aligned with the GLDS
+  Standard Build System, while enhancing UI clarity, warmth, and
+  emotional resonance without adding operational complexity.
+
+
+Scope of Work
+
+1. Architecture Implementation (Per GLDS Standard)
+   Based on the provided architecture overview 
+   
+   Frontend:
+      React Native Web (GLDS standard)
+      Shared UI package structure
+      Lightweight state handling with Firebase-backed operations
+
+   Backend:
+      Firebase Auth (auto or passwordless)
+      Firestore (greetings, templates, analytics)
+      Firebase Storage (media)
+
+   Cloud Functions:
+       Artifact generation
+       Scheduled sends
+       ICS calendar file generation
+       Public link security logic
+    
+   Infrastructure:
+      Firebase Hosting
+      Stage + Production environments
+      CI/CD (GitHub Actions)
+
+   Deliverable: Production-grade architecture aligned to documented
+    design.
+
+
+2. UI/UX Enhancement
+   The UI must reflect warmth, simplicity, and intentionality.
+
+   Focus areas:
+    a. Template selection experience
+    b. Message input flow (minimal friction)
+    c. Media upload clarity
+    d. Preview rendering polish
+    e. Micro-interactions and animation softness
+    f. Typography refinement
+    g. Color consistency aligned with brand tone
+
+3. Creator Flow Stabilization
+   a. Autosign-in experience
+   b. Template selection
+   c. Add message + optional media
+   d. Instant preview rendering
+   e. Save → Artifact generation via Cloud Function
+   f. Immediate send or scheduled delivery
+
+4. Recipient Experience
+   a. Clean, focused public greeting page
+   b. Stream-only media playback
+   c. Smooth animation
+   d. Optional calendar add (ICS)
+   e. No login required
+ 
+5. Scheduling & Delivery
+   a. Cloud Function-based scheduled sends
+   b. Public link generation
+   c. Optional email delivery
+   d. ICS file generation
+
+
+6. Privacy & Security
+   Aligned with architecture:
+    a. Public link access only
+    b. Strict Firestore rules
+    c. Stream-only media
+    d. No unnecessary user data retention
+    e. GDPR-conscious design
+
+
+Timeline & Milestones
+
+Estimated Timeline: 8–10 Weeks
+
+Phase 1 – Architecture Setup & Core Build (Weeks 1–3)
+   Firebase environment configuration
+   Authentication setup
+   Firestore data model implementation
+   Template engine foundation
+   Media upload integration
+
+Phase 2 – Greeting Artifact & Public Page (Weeks 4–5)
+   Cloud Function artifact creation
+   Public share page
+   Media streaming
+   ICS calendar integration
+
+
+Phase 3 – Scheduling & Delivery (Week 6)
+    Scheduled sends
+    Public link validation
+    Email trigger setup (if included)
+
+Phase 4 – UI/UX Refinement (Weeks 7–8)
+   Visual polish
+   Animation refinement
+   Mobile responsiveness validation
+   Performance optimization
+
+
+
+
+
+--------------------------------------------------------------
+Shopify 2.0 Theme Migration
+
+Purpose:
+  To migrate the existing store to a Shopify 2.0 theme and deliver a
+  clean, modern, minimalist experience designed to reduce friction and
+  guide visitors directly to purchase.
+
+
+ Scope of Work
+1. Full Shopify 2.0 Theme Migration
+
+a. Install and configure selected Shopify 2.0 theme
+b. Rebuild homepage, product pages, collections, blogs, and static pages
+c. Preserve all products, collections, tags, and metafields
+d. Maintain URL structure and SEO metadata
+e. Validate checkout continuity
+
+Theme will leverage Shopify 2.0 sections and blocks for modular editing.
+
+
+Scope of Work
+1. Full Shopify 2.0 Theme Migration
+   a. Install and configure selected Shopify 2.0 theme
+   b. Rebuild homepage, product pages, collections, blogs, and static
+      pages
+   c. Preserve all products, collections, tags, and metafields
+   d. Maintain URL structure and SEO metadata
+   e. Validate checkout continuity
+
+  Theme will leverage Shopify 2.0 sections and blocks for modular
+  editing.
+
+2. Homepage Redesign
+   Structure:
+     - Clean hero section (no clutter or auto sliders)
+     - Featured Products strip (editable from backend)
+     - Focused call-to-action hierarchy
+     - Minimalist layout with controlled spacing
+   Featured Products will be manageable via theme sections 
+   without code edits.
+
+3. Mega Menu Implementation
+    a. Replace current navigation with structured mega menu
+    b. Display all major product categories at a glance
+    c. Ensure two-click access to products
+    d. Smooth mobile expandable panel design
+    e. Performance-optimised rendering
+
+
+4. Visual System & Icon Preservation
+    a. Migrate existing clothing colour icons
+    b. Convert to SVG where possible
+    c. Optimise for retina displays
+    d. Maintain restrained neutral palette
+    e. Ensure icons visually stand out
+
+5. Store Locator Rebuild
+    a. Replace current locator
+    b. Implement Google Maps or Shopify-compatible locator app
+    c. Autocomplete address search
+    d. Product availability filtering
+    e. Performance-optimised map loading
+
+6. Performance & SEO
+    a. Core Web Vitals optimisation
+    b. Responsive breakpoint testing
+    c. Image optimisation
+    d. Script minimisation
+    e. Preserve canonical URLs
+    f. Metadata verification
+    g. Structured data validation
+
+7. Tracking Setup
+    a. GA4 installation
+    b. Facebook Pixel setup
+    c. Basic event validation
+    d. Testing post-launch
+
+Estimated Timeline: 5 Weeks
+
+
+
+===============================================================
+Fleet Depot CPMS & Energy Orchestration Platform – Delivery Approach
+
+Thank you for sharing the detailed PRD. The scope, ambition, and long-term positioning as a Fleet Energy Operating System are clear. This is infrastructure-grade software and should be treated as such from day one.
+
+Based on the requirements, the correct approach is to build a modular, cloud-native, event-driven platform with a hardware abstraction layer (OCPP 1.6J minimum, 2.0.1 ready), a real-time energy orchestration engine, and a scalable billing/compliance layer aligned with EU regulations.
+
+Below is a concise execution proposal.
+
+
+Delivery Approach
+
+The system will be structured into core domains:
+  1. OCPP Charger Management Core (multi-vendor, real-time telemetry,
+     remote control, firmware management)
+
+  2. Depot Energy Orchestration Engine (readiness guarantee + tariff
+     /grid optimisation with rolling recalculation)
+
+  3. Fleet & Dispatch Integration Layer (API-first)
+
+  4. Subcontractor Charging & Billing (PSD2 compliant, VAT-ready)
+
+  5. Autonomous Fault Detection & Self-Healing Engine
+
+  6. Operator Control Tower (real-time depot dashboard)
+
+  7. Reporting & Analytics Layer
+
+Architecture will be:
+  a. Microservices or modular monolith (domain-separated)
+  b. Event-driven (Kafka or equivalent)
+  c. REST APIs + Webhooks
+  d. Relational DB (core data) + Time-series DB (telemetry)
+  e. Cloud-native deployment (containerised, CI/CD, EU hosting)
+
+Designed from day one to support:
+   a. 10,000+ chargers
+   b. Multi-depot enterprise fleets
+   c. ≥99.9% availability target
+   
+
+Phased Execution Plan
+
+ Phase 0 – Architecture & Foundation (8–10 weeks)
+   a. System architecture
+   b. Security & compliance design (GDPR, PSD2, MID considerations)
+   c. OCPP gateway design
+   d. Infrastructure setup
+Milestone: Production-ready technical foundation.
+
+Phase 1 – MVP (6–8 months)
+   a. OCPP charger management
+   b. Basic energy optimisation engine
+   c. Fleet schedule integration
+   d. Readiness dashboard
+   e. Manual billing/invoicing
+   f. Single-depot support
+
+ Milestone: Pilot depot live with readiness guarantee and operational
+  control.
+
+Phase 2 – Automation & Commercial Layer (4–6 months)
+  a. Autonomous fault recovery workflows
+  b. Subcontractor charging & billing automation
+  c. Settlement reporting
+  d. Multi-depot support
+  e. Advanced optimisation logic
+
+ Milestone: Enterprise-grade multi-operator platform.
+
+Phase 3 – Intelligence & Expansion (6+ months)
+  a. Predictive fault detection
+  b. Cross-depot optimisation
+  c. Energy trading & V2G readiness
+  d. AI-based forecasting
+
+Milestone: Fleet-EOS positioned as full depot energy operating system.
+
+
+Clarifications Required Before Detailed Estimation
+  To refine scope and budget accurately, the following need
+  confirmation:
+   1. Which charger manufacturers must be supported initially?
+   2. Are MID-certified meters already deployed?
+   3. Preferred payment service provider?
+   4. Target cloud provider and data residency requirements?
+   5. Initial fleet size and expected charger count for MVP?
+   6. Is roaming (OCPI) required in Phase 1?
+   7. Do you require deterministic readiness guarantees or acceptable
+      risk modelling?
+
+
+
+
+===================================================================
+Fleet Depot Charge Point Management & Energy Orchestration Platform (Fleet-EOS)
+
+Purpose:
+  To design and develop an enterprise-grade Charge Point Management
+  System (CPMS) combined with a Depot Energy Orchestration Engine for
+  commercial electric fleets (buses, eHGVs, eLCVs) across Europe.
+
+  The platform will function as the central intelligence layer for
+  electric fleet depots, guaranteeing vehicle readiness, optimizing
+  depot energy usage within grid constraints, autonomously managing
+  charging infrastructure, and supporting multi-operator billing and
+  settlement under EU regulatory requirements.
+ 
+ 
+1. Strategic Product Approach
+   The build will follow a layered architecture:
+     1. Hardware Abstraction Layer (OCPP CPMS Core)
+     2. Energy Orchestration Engine (Optimization & Readiness)
+     3. Fleet Integration Layer
+     4. Multi-Operator Billing & Settlement
+     5. Autonomous Fault & Self-Healing Engine
+     6. Operator Control Tower
+     7. Analytics & Enterprise Reporting
+  
+  Architecture will be API-first, event-driven, cloud-native, and built
+  for 10,000+ chargers scalability from day one. 
+  
+
+2. Proposed Technical Architecture
+
+ 2.1 Backend Architecture
+     Recommended structure:
+      - Microservices architecture (domain-based separation)
+      - Event-driven system (Kafka or equivalent)
+      - REST API + Webhooks
+      - Async job processing for optimization and automation tasks
+
+    Core Services:
+     
+OCPP Gateway Service
+
+Charger Management Service
+
+Energy Optimization Service
+
+Fleet Scheduling Service
+
+Billing & Settlement Service
+
+Fault Detection & Automation Service
+
+Reporting & Analytics Service
+
+Identity & Access Management Service
+  
+
+--------------------------------------------------------------
+Custom E-Commerce Platform with Product Customization & Live Preview
+
+Purpose:
+  To design and develop a scalable, performance-optimized e-commerce
+  platform inspired by the user experience and customization flow of
+  Framebridge, enabling customers to upload images, configure products,
+  preview designs, and complete secure online purchases.
+
+
+Scope of the tasks:
+
+1. UI/UX & Information Architecture
+   a. Clean, modern design system
+   b. Guided step-by-step customization journey
+   c. Mobile-first layout
+   d. Conversion-focused interface
+   e. Intuitive navigation
+
+
+2. Product Customization Engine
+   Core Functionality:
+     a. Product selection
+     b. Configuration options (size, material, finish, etc.)
+     c. Image upload
+     d. Live preview rendering
+     e. Dynamic price updates
+     f. Validation logic
+
+    The customization flow will be structured to minimize friction and
+    guide users clearly through the process.
+
+3. Image Upload & Preview
+   a. Secure image upload
+   b. Storage optimization
+   c. Real-time preview rendering
+   d. Cropping/positioning tools (if required)
+   e. Performance optimization for large images
+
+4. Checkout & Payment Integration
+    a. Secure Stripe integration
+    b. Order summary validation
+    c. Tax and shipping logic
+    d. Order confirmation
+    e. Email notifications
+
+5. Admin Dashboard
+   a. Product management
+   b. Configuration rule management
+   c. Order tracking
+   d. Content management
+   e. Image review and processing
+   f. Basic analytics overview
+  Admin interface designed for operational efficiency.
+
+6. SEO & Performance
+     a. Clean URL structure
+     b. Metadata management
+     c. Structured data (schema)
+     d. Image optimization
+     e. Core Web Vitals alignment
+     f. Performance testing before launch
+     
+ Deliverables
+   1. Fully functional e-commerce website
+   2. Custom product configuration system
+   3. Image upload and preview engine
+   4. Secure checkout integration
+   5. Admin dashboard
+   6. SEO-optimized structure
+   7. Deployment to production
+   8. Technical documentation and handover session
+ 
+ 
+ Timeline and Milestones:
+ 
+ 
+ Phase 1 – Discovery & Architecture (Weeks 1–2)
+   a. Requirement finalization
+   b. Technical stack confirmation
+   c. UX wireframes
+   d. Customization flow mapping
+
+Phase 2 – UI Design (Weeks 3–4)
+   a. High-fidelity mockups
+   b. Mobile responsiveness design
+   c. Interaction prototypes
+
+Phase 3 – Core Development (Weeks 5–10)
+   a. Frontend development
+   b. Backend API development
+   c. Image upload & preview logic
+   d. Admin dashboard build
+
+Phase 4 – Payment & System Integration (Weeks 11–12)
+   a. Stripe integration
+   b. Tax and shipping logic
+   c. Email automation
+   d. QA testing
+
+Phase 5 – Optimization & Launch (Weeks 13–16)
+   a. Performance optimization
+   b. SEO configuration
+   c. Security hardening
+   d. Cross-device testing
+   e. Production deployment
+   f. Handover session
+
+ ----------------------------------------
+ Today Feb 23, 2026
+ 23.02.2026
+ Zero: 2
+ two: 4
+ three: 1
+ six: 1

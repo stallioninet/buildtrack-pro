@@ -1,0 +1,2636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuildTrack Pro - Home Construction Management</title>
+<style>
+:root {
+  --primary: #1e40af;
+  --primary-light: #3b82f6;
+  --primary-dark: #1e3a8a;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --info: #0891b2;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --sidebar-w: 250px;
+  --topbar-h: 60px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--gray-100); color: var(--gray-800); }
+a { text-decoration: none; color: inherit; }
+
+/* LOGIN */
+.login-page { display:flex; min-height:100vh; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+.login-left { flex:1; display:flex; flex-direction:column; justify-content:center; padding:60px; color:#fff; }
+.login-left h1 { font-size:2.8rem; margin-bottom:12px; }
+.login-left p { font-size:1.1rem; opacity:.85; max-width:500px; line-height:1.6; }
+.login-left .features { margin-top:40px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.login-left .feat { background:rgba(255,255,255,.12); border-radius:10px; padding:16px; }
+.login-left .feat h4 { margin-bottom:4px; font-size:.95rem; }
+.login-left .feat span { font-size:.8rem; opacity:.7; }
+.login-right { width:460px; background:#fff; display:flex; align-items:center; justify-content:center; padding:50px; }
+.login-box { width:100%; }
+.login-box h2 { font-size:1.5rem; margin-bottom:6px; color:var(--gray-900); }
+.login-box .sub { color:var(--gray-500); margin-bottom:30px; font-size:.9rem; }
+.form-group { margin-bottom:18px; }
+.form-group label { display:block; font-size:.85rem; font-weight:600; color:var(--gray-700); margin-bottom:6px; }
+.form-group input, .form-group select { width:100%; padding:10px 14px; border:1px solid var(--gray-300); border-radius:8px; font-size:.95rem; outline:none; transition:border .2s; }
+.form-group input:focus, .form-group select:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.btn { padding:11px 24px; border:none; border-radius:8px; font-size:.95rem; font-weight:600; cursor:pointer; transition:all .2s; }
+.btn-primary { background:var(--primary); color:#fff; width:100%; }
+.btn-primary:hover { background:var(--primary-dark); }
+.btn-sm { padding:7px 16px; font-size:.82rem; }
+.btn-outline { background:transparent; border:1px solid var(--gray-300); color:var(--gray-700); }
+.btn-outline:hover { background:var(--gray-100); }
+.btn-success { background:var(--success); color:#fff; }
+.btn-danger { background:var(--danger); color:#fff; }
+.btn-warning { background:var(--warning); color:#fff; }
+.btn-info { background:var(--info); color:#fff; }
+
+/* APP SHELL */
+.app { display:none; }
+.app.active { display:flex; min-height:100vh; }
+.sidebar { width:var(--sidebar-w); background:var(--gray-900); color:#fff; position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:100; transition:transform .3s; }
+.sidebar .logo { padding:18px 20px; border-bottom:1px solid var(--gray-700); display:flex; align-items:center; gap:10px; }
+.sidebar .logo .icon { width:36px; height:36px; background:var(--primary-light); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem; }
+.sidebar .logo span { font-weight:700; font-size:1.05rem; }
+.sidebar .role-badge { margin:16px 20px; padding:8px 12px; background:var(--primary); border-radius:6px; font-size:.78rem; text-align:center; font-weight:600; }
+.sidebar nav { padding:10px 0; }
+.sidebar nav a { display:flex; align-items:center; gap:12px; padding:11px 20px; font-size:.9rem; color:var(--gray-300); transition:all .15s; border-left:3px solid transparent; }
+.sidebar nav a:hover { background:var(--gray-800); color:#fff; }
+.sidebar nav a.active { background:var(--gray-800); color:#fff; border-left-color:var(--primary-light); }
+.sidebar nav a .nav-icon { width:20px; text-align:center; font-size:1rem; }
+.sidebar nav .divider { height:1px; background:var(--gray-700); margin:10px 20px; }
+
+.main { flex:1; margin-left:var(--sidebar-w); }
+.topbar { height:var(--topbar-h); background:#fff; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:50; }
+.topbar h2 { font-size:1.15rem; color:var(--gray-800); }
+.topbar .topbar-right { display:flex; align-items:center; gap:16px; }
+.topbar .notif { position:relative; cursor:pointer; font-size:1.2rem; }
+.topbar .notif .badge { position:absolute; top:-5px; right:-6px; background:var(--danger); color:#fff; font-size:.65rem; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.topbar .avatar { width:34px; height:34px; background:var(--primary); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:.85rem; cursor:pointer; }
+
+.content { padding:24px 28px; }
+
+/* CARDS */
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:18px; margin-bottom:24px; }
+.card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.card-header h3 { font-size:.9rem; color:var(--gray-600); font-weight:500; }
+.card .big-num { font-size:1.9rem; font-weight:700; color:var(--gray-900); }
+.card .change { font-size:.8rem; margin-top:4px; }
+.card .change.up { color:var(--success); }
+.card .change.down { color:var(--danger); }
+.stat-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
+.stat-icon.blue { background:#dbeafe; color:var(--primary); }
+.stat-icon.green { background:#dcfce7; color:var(--success); }
+.stat-icon.yellow { background:#fef3c7; color:var(--warning); }
+.stat-icon.red { background:#fee2e2; color:var(--danger); }
+.stat-icon.cyan { background:#cffafe; color:var(--info); }
+
+/* PANELS */
+.panel { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:24px; }
+.panel-head { display:flex; justify-content:space-between; align-items:center; padding:18px 20px; border-bottom:1px solid var(--gray-200); }
+.panel-head h3 { font-size:1rem; font-weight:600; }
+.panel-body { padding:20px; }
+
+/* TABLE */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:.88rem; }
+th { text-align:left; padding:10px 14px; background:var(--gray-50); color:var(--gray-600); font-weight:600; border-bottom:1px solid var(--gray-200); white-space:nowrap; }
+td { padding:10px 14px; border-bottom:1px solid var(--gray-100); }
+tr:hover td { background:var(--gray-50); }
+
+/* BADGES */
+.badge-pill { padding:4px 10px; border-radius:20px; font-size:.75rem; font-weight:600; display:inline-block; }
+.badge-green { background:#dcfce7; color:#166534; }
+.badge-yellow { background:#fef3c7; color:#92400e; }
+.badge-red { background:#fee2e2; color:#991b1b; }
+.badge-blue { background:#dbeafe; color:#1e40af; }
+.badge-gray { background:#f3f4f6; color:#4b5563; }
+.badge-cyan { background:#cffafe; color:#155e75; }
+
+/* PROGRESS BAR */
+.progress { height:8px; background:var(--gray-200); border-radius:4px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:4px; transition:width .4s; }
+
+/* CHART PLACEHOLDER */
+.chart-placeholder { background:var(--gray-50); border:2px dashed var(--gray-300); border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--gray-400); font-size:.9rem; min-height:200px; }
+.chart-bar { display:flex; align-items:flex-end; gap:8px; height:180px; padding-top:10px; }
+.chart-bar .bar-col { display:flex; flex-direction:column; align-items:center; flex:1; }
+.chart-bar .bar { width:100%; border-radius:4px 4px 0 0; min-height:4px; transition:height .4s; position:relative; }
+.chart-bar .bar-label { font-size:.7rem; color:var(--gray-500); margin-top:6px; text-align:center; }
+.chart-bar .bar-val { font-size:.7rem; font-weight:600; color:var(--gray-700); margin-bottom:4px; }
+
+/* STAGE TIMELINE */
+.stage-timeline { display:flex; gap:4px; margin:20px 0; flex-wrap:wrap; }
+.stage-item { flex:1; min-width:80px; text-align:center; padding:10px 6px; border-radius:8px; font-size:.75rem; font-weight:600; position:relative; }
+.stage-item.completed { background:#dcfce7; color:#166534; }
+.stage-item.in-progress { background:#dbeafe; color:#1e40af; }
+.stage-item.pending { background:var(--gray-100); color:var(--gray-500); }
+.stage-item.blocked { background:#fee2e2; color:#991b1b; }
+.stage-item .stage-num { font-size:.65rem; opacity:.7; display:block; margin-bottom:2px; }
+
+/* MODAL */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:#fff; border-radius:14px; width:90%; max-width:560px; max-height:85vh; overflow-y:auto; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; padding:18px 22px; border-bottom:1px solid var(--gray-200); }
+.modal-header h3 { font-size:1.05rem; }
+.modal-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--gray-500); }
+.modal-body { padding:22px; }
+.modal-footer { padding:14px 22px; border-top:1px solid var(--gray-200); display:flex; justify-content:flex-end; gap:10px; }
+
+/* TABS */
+.tabs { display:flex; gap:2px; border-bottom:2px solid var(--gray-200); margin-bottom:20px; }
+.tab { padding:10px 20px; font-size:.88rem; font-weight:500; color:var(--gray-500); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s; }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.tab:hover { color:var(--gray-700); }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* ALERTS */
+.alert { padding:14px 18px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; gap:10px; font-size:.88rem; }
+.alert-warning { background:#fef3c7; border-left:4px solid var(--warning); color:#92400e; }
+.alert-danger { background:#fee2e2; border-left:4px solid var(--danger); color:#991b1b; }
+.alert-success { background:#dcfce7; border-left:4px solid var(--success); color:#166534; }
+.alert-info { background:#cffafe; border-left:4px solid var(--info); color:#155e75; }
+
+/* GRID LAYOUT */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+
+/* PHOTO GRID */
+.photo-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:12px; }
+.photo-card { border-radius:8px; overflow:hidden; background:var(--gray-200); aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; color:var(--gray-500); font-size:.8rem; position:relative; }
+.photo-card .photo-date { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.6); color:#fff; font-size:.7rem; padding:4px 8px; }
+
+/* CHECKLIST */
+.checklist-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--gray-100); }
+.checklist-item input[type="checkbox"] { width:18px; height:18px; accent-color:var(--primary); }
+.checklist-item label { font-size:.88rem; flex:1; }
+.checklist-item .mandatory { color:var(--danger); font-size:.75rem; font-weight:600; }
+
+/* SUB-STAGE ACCORDION */
+.substage-list { margin:0; }
+.substage { border:1px solid var(--gray-200); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+.substage-header { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; background:#fff; transition:background .15s; user-select:none; }
+.substage-header:hover { background:var(--gray-50); }
+.substage-header .ss-arrow { transition:transform .2s; font-size:.8rem; color:var(--gray-400); }
+.substage-header .ss-arrow.open { transform:rotate(90deg); }
+.substage-header .ss-name { flex:1; font-weight:600; font-size:.92rem; }
+.substage-header .ss-status { margin-left:auto; }
+.substage-header .ss-pct { font-size:.82rem; font-weight:600; color:var(--gray-600); min-width:40px; text-align:right; }
+.substage-body { display:none; border-top:1px solid var(--gray-200); padding:16px 18px; background:var(--gray-50); }
+.substage-body.open { display:block; }
+.substage-progress { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.substage-progress .progress { flex:1; height:6px; }
+
+/* CHECKLIST ENHANCED */
+.cl-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+.cl-table th { text-align:left; padding:8px 10px; background:var(--gray-100); color:var(--gray-600); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.3px; border-bottom:1px solid var(--gray-200); }
+.cl-table td { padding:9px 10px; border-bottom:1px solid var(--gray-100); vertical-align:top; }
+.cl-table tr:hover td { background:#fff; }
+.cl-table .cl-check { width:22px; text-align:center; }
+.cl-table .cl-check input { width:16px; height:16px; accent-color:var(--primary); cursor:pointer; }
+.cl-table .cl-item { line-height:1.4; }
+.cl-table .cl-std { font-size:.76rem; color:var(--info); font-weight:500; white-space:nowrap; }
+.cl-table .cl-mand { width:30px; text-align:center; }
+.cl-mandatory { display:inline-block; width:8px; height:8px; background:var(--danger); border-radius:50%; }
+.cl-optional { display:inline-block; width:8px; height:8px; background:var(--gray-300); border-radius:50%; }
+.std-ref { display:inline-block; padding:2px 7px; background:#e0f2fe; color:#0369a1; border-radius:4px; font-size:.72rem; font-weight:600; margin-top:2px; }
+
+/* STAGE DETAIL HEADER */
+.stage-detail-header { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+.stage-detail-header .back-btn { width:36px; height:36px; border-radius:8px; border:1px solid var(--gray-300); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.1rem; }
+.stage-detail-header .back-btn:hover { background:var(--gray-100); }
+.stage-detail-header .sdh-info { flex:1; }
+.stage-detail-header .sdh-info h2 { font-size:1.2rem; margin-bottom:2px; }
+.stage-detail-header .sdh-info span { font-size:.85rem; color:var(--gray-500); }
+.stage-detail-header .sdh-stats { display:flex; gap:20px; }
+.stage-detail-header .sdh-stat { text-align:center; }
+.stage-detail-header .sdh-stat .val { font-size:1.3rem; font-weight:700; }
+.stage-detail-header .sdh-stat .lbl { font-size:.75rem; color:var(--gray-500); }
+
+.substage-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
+.ss-summary-card { background:#fff; border:1px solid var(--gray-200); border-radius:8px; padding:12px; text-align:center; }
+.ss-summary-card .ss-val { font-size:1.4rem; font-weight:700; }
+.ss-summary-card .ss-lbl { font-size:.78rem; color:var(--gray-500); margin-top:2px; }
+
+/* STATE MACHINE FLOW DIAGRAM */
+.sm-container { padding:20px 0; }
+.sm-flow { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:16px; background:var(--gray-50); border-radius:12px; border:1px solid var(--gray-200); }
+.sm-node { padding:10px 16px; border-radius:8px; font-size:.82rem; font-weight:600; border:2px solid; min-width:90px; text-align:center; position:relative; cursor:default; transition:transform .15s, box-shadow .15s; }
+.sm-node:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.12); }
+.sm-node.draft { background:#f3f4f6; border-color:#9ca3af; color:#4b5563; }
+.sm-node.active-state { background:#dbeafe; border-color:#3b82f6; color:#1e40af; animation:pulse-border 2s infinite; }
+.sm-node.completed-state { background:#dcfce7; border-color:#16a34a; color:#166534; }
+.sm-node.blocked-state { background:#fee2e2; border-color:#dc2626; color:#991b1b; }
+.sm-node.pending-state { background:#fef3c7; border-color:#f59e0b; color:#92400e; }
+.sm-node.locked-state { background:#f3e8ff; border-color:#9333ea; color:#6b21a8; }
+.sm-node.highlight { box-shadow:0 0 0 3px rgba(59,130,246,.4); }
+@keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.3)} 50%{box-shadow:0 0 0 6px rgba(59,130,246,0)} }
+.sm-arrow { color:var(--gray-400); font-size:1.1rem; font-weight:700; flex-shrink:0; }
+.sm-arrow.active-arrow { color:var(--primary); }
+.sm-transition-info { font-size:.72rem; color:var(--gray-500); text-align:center; margin-top:2px; line-height:1.3; }
+.sm-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; font-size:.78rem; color:var(--gray-600); }
+.sm-legend span { display:flex; align-items:center; gap:4px; }
+.sm-legend .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+/* WORKFLOW CARDS */
+.wf-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:16px; }
+.wf-card { background:#fff; border-radius:12px; border:1px solid var(--gray-200); overflow:hidden; transition:box-shadow .2s; }
+.wf-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.wf-card-head { padding:14px 18px; background:var(--gray-50); border-bottom:1px solid var(--gray-200); display:flex; justify-content:space-between; align-items:center; }
+.wf-card-head h4 { font-size:.92rem; font-weight:600; }
+.wf-card-head .entity { font-size:.75rem; color:var(--gray-500); padding:3px 8px; background:var(--gray-200); border-radius:4px; }
+.wf-card-body { padding:16px 18px; }
+.wf-guard { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:#fef3c7; color:#92400e; border-radius:4px; font-size:.72rem; font-weight:500; margin:2px; }
+.wf-guard::before { content:"⚡"; font-size:.7rem; }
+.wf-trigger { font-size:.75rem; color:var(--info); font-weight:600; }
+
+/* TRANSITION ACTION BUTTONS */
+.transition-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.btn-transition { padding:8px 16px; border:2px solid; border-radius:8px; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:6px; background:transparent; }
+.btn-transition:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,0,0,.1); }
+.btn-transition:disabled { opacity:.4; cursor:not-allowed; }
+.btn-transition.advance { border-color:var(--success); color:var(--success); }
+.btn-transition.advance:hover:not(:disabled) { background:var(--success); color:#fff; }
+.btn-transition.hold { border-color:var(--warning); color:var(--warning); }
+.btn-transition.hold:hover:not(:disabled) { background:var(--warning); color:#fff; }
+.btn-transition.reject { border-color:var(--danger); color:var(--danger); }
+.btn-transition.reject:hover:not(:disabled) { background:var(--danger); color:#fff; }
+
+/* AUDIT LOG */
+.audit-timeline { position:relative; padding-left:24px; }
+.audit-timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:var(--gray-200); }
+.audit-entry { position:relative; padding:10px 14px; margin-bottom:12px; background:#fff; border-radius:8px; border:1px solid var(--gray-200); font-size:.84rem; }
+.audit-entry::before { content:''; position:absolute; left:-20px; top:14px; width:10px; height:10px; border-radius:50%; border:2px solid var(--primary); background:#fff; }
+.audit-entry.entry-success::before { border-color:var(--success); background:#dcfce7; }
+.audit-entry.entry-warning::before { border-color:var(--warning); background:#fef3c7; }
+.audit-entry.entry-danger::before { border-color:var(--danger); background:#fee2e2; }
+.audit-entry .audit-meta { display:flex; gap:12px; font-size:.76rem; color:var(--gray-500); margin-top:4px; }
+.audit-entry .audit-action { font-weight:600; color:var(--gray-800); }
+
+/* SP 62 REFERENCE PANEL */
+.sp62-panel { background:linear-gradient(135deg,#eff6ff,#dbeafe); border:1px solid #93c5fd; border-radius:10px; padding:16px; margin-bottom:16px; }
+.sp62-panel h4 { font-size:.9rem; color:#1e40af; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.sp62-panel h4::before { content:"📖"; }
+.sp62-chapter { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; background:#fff; border:1px solid #93c5fd; border-radius:6px; font-size:.78rem; color:#1e40af; font-weight:500; margin:3px; }
+.sp62-chapter .ch-num { background:#1e40af; color:#fff; padding:1px 6px; border-radius:3px; font-size:.72rem; font-weight:700; }
+.sp62-note { font-size:.8rem; color:#4b5563; line-height:1.5; margin-top:8px; padding:8px 12px; background:#fff; border-radius:6px; border-left:3px solid #3b82f6; }
+
+/* STATUS HISTORY PANEL */
+.status-history { padding:12px 0; }
+.status-step { display:flex; align-items:flex-start; gap:12px; padding:8px 0; position:relative; }
+.status-step:not(:last-child)::after { content:''; position:absolute; left:14px; top:32px; bottom:-4px; width:2px; background:var(--gray-200); }
+.status-dot { width:12px; height:12px; border-radius:50%; margin-top:4px; flex-shrink:0; border:2px solid; }
+.status-dot.green { border-color:var(--success); background:#dcfce7; }
+.status-dot.blue { border-color:var(--primary); background:#dbeafe; }
+.status-dot.yellow { border-color:var(--warning); background:#fef3c7; }
+.status-dot.red { border-color:var(--danger); background:#fee2e2; }
+.status-dot.gray { border-color:var(--gray-400); background:var(--gray-100); }
+.status-dot.purple { border-color:#9333ea; background:#f3e8ff; }
+
+/* GUARD CONDITION BADGE */
+.guard-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:12px; font-size:.72rem; font-weight:600; }
+.guard-badge.met { background:#dcfce7; color:#166534; }
+.guard-badge.unmet { background:#fee2e2; color:#991b1b; }
+.guard-badge::before { font-size:.8rem; }
+.guard-badge.met::before { content:"✓"; }
+.guard-badge.unmet::before { content:"✗"; }
+
+/* RESPONSIVE */
+@media(max-width:768px) {
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.open { transform:translateX(0); }
+  .main { margin-left:0; }
+  .login-page { flex-direction:column; }
+  .login-right { width:100%; }
+  .login-left { padding:30px; }
+  .login-left h1 { font-size:1.8rem; }
+  .login-left .features { grid-template-columns:1fr; }
+  .grid-2, .grid-3 { grid-template-columns:1fr; }
+  .cards { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ======================== LOGIN PAGE ======================== -->
+<div class="login-page" id="loginPage">
+  <div class="login-left">
+    <h1>BuildTrack Pro</h1>
+    <p>Innovative Home Construction Management System &mdash; End-to-end lifecycle management from land to handover with real-time cost control and owner transparency.</p>
+    <div class="features">
+      <div class="feat"><h4>&#9679; Stage-Gated Execution</h4><span>11 customizable construction stages</span></div>
+      <div class="feat"><h4>&#9679; Real-Time Budget</h4><span>Live cost tracking & variance alerts</span></div>
+      <div class="feat"><h4>&#9679; Material Tracking</h4><span>QR-based inward & wastage analytics</span></div>
+      <div class="feat"><h4>&#9679; Owner Portal</h4><span>Transparent KPI dashboard</span></div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="login-box">
+      <h2>Welcome back</h2>
+      <p class="sub">Sign in to your construction project</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" value="admin@buildtrack.com" placeholder="Enter email">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" value="password" placeholder="Enter password">
+      </div>
+      <div class="form-group">
+        <label>Login as Role</label>
+        <select id="loginRole">
+          <option value="owner">Owner</option>
+          <option value="pm" selected>Project Manager</option>
+          <option value="engineer">Site Engineer</option>
+          <option value="contractor">Contractor</option>
+          <option value="procurement">Procurement Manager</option>
+          <option value="accounts">Accounts</option>
+          <option value="inspector">Quality Inspector</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== APP SHELL ======================== -->
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="icon">B</div>
+      <span>BuildTrack Pro</span>
+    </div>
+    <div class="role-badge" id="roleBadge">PROJECT MANAGER</div>
+    <nav id="sidebarNav"></nav>
+    <div style="padding:16px 20px; margin-top:auto; border-top:1px solid var(--gray-700);">
+      <a href="#" onclick="doLogout()" style="font-size:.85rem; color:var(--gray-400);">&#x2190; Sign Out</a>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span style="cursor:pointer;font-size:1.3rem;display:none;" id="menuToggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</span>
+        <h2 id="pageTitle">Dashboard</h2>
+      </div>
+      <div class="topbar-right">
+        <span style="font-size:.85rem;color:var(--gray-500);">Kumar Villa Project</span>
+        <div class="notif" onclick="showModal('notifModal')">&#128276;<div class="badge">3</div></div>
+        <div class="avatar" id="userAvatar">PM</div>
+      </div>
+    </div>
+    <div class="content" id="mainContent"></div>
+  </div>
+</div>
+
+<!-- ======================== NOTIFICATION MODAL ======================== -->
+<div class="modal-overlay" id="notifModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Notifications</h3><button class="modal-close" onclick="hideModal('notifModal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="alert alert-warning">&#9888; Budget > 80% used for Structure stage</div>
+      <div class="alert alert-danger">&#9888; Inspection failed for Foundation stage - 2 defects open</div>
+      <div class="alert alert-info">&#128230; Material delivery from Ambuja Cement expected today</div>
+      <div class="alert alert-success">&#10003; Electrical stage inspection passed</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== APPROVAL MODAL ======================== -->
+<div class="modal-overlay" id="approvalModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="approvalTitle">Approve Request</h3><button class="modal-close" onclick="hideModal('approvalModal')">&times;</button></div>
+    <div class="modal-body" id="approvalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-sm btn-outline" onclick="hideModal('approvalModal')">Cancel</button>
+      <button class="btn btn-sm btn-danger" onclick="hideModal('approvalModal')">Reject</button>
+      <button class="btn btn-sm btn-success" onclick="hideModal('approvalModal')">Approve</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== DATA ==========
+const PROJECT = {
+  name: "Kumar Villa Project", location: "Whitefield, Bangalore", plotSize: "2400 sqft",
+  startDate: "2025-09-01", plannedEnd: "2026-08-30", status: "active",
+  totalBudget: 8500000, spent: 3420000, completion: 38
+};
+
+const STAGES = [
+  { id:1, name:"Planning & Design", status:"completed", completion:100, budget:200000, spent:185000, start:"2025-09-01", end:"2025-09-30" },
+  { id:2, name:"Approvals & Permits", status:"completed", completion:100, budget:150000, spent:142000, start:"2025-10-01", end:"2025-10-20" },
+  { id:3, name:"Foundation", status:"completed", completion:100, budget:1200000, spent:1180000, start:"2025-10-21", end:"2025-12-15" },
+  { id:4, name:"Structure", status:"in-progress", completion:65, budget:2200000, spent:1450000, start:"2025-12-16", end:"2026-02-28" },
+  { id:5, name:"Brickwork", status:"pending", completion:0, budget:800000, spent:0, start:"2026-03-01", end:"2026-03-31" },
+  { id:6, name:"Roofing", status:"pending", completion:0, budget:600000, spent:0, start:"2026-04-01", end:"2026-04-20" },
+  { id:7, name:"Electrical & Plumbing", status:"pending", completion:0, budget:900000, spent:0, start:"2026-04-21", end:"2026-05-30" },
+  { id:8, name:"Plastering", status:"pending", completion:0, budget:500000, spent:0, start:"2026-06-01", end:"2026-06-20" },
+  { id:9, name:"Flooring", status:"pending", completion:0, budget:700000, spent:0, start:"2026-06-21", end:"2026-07-15" },
+  { id:10, name:"Finishing", status:"pending", completion:0, budget:850000, spent:0, start:"2026-07-16", end:"2026-08-15" },
+  { id:11, name:"Handover", status:"pending", completion:0, budget:400000, spent:0, start:"2026-08-16", end:"2026-08-30" }
+];
+
+const VENDORS = [
+  { id:1, name:"Ambuja Cement Dealers", type:"Supplier", rating:4.2, status:"Active", phone:"9876543210" },
+  { id:2, name:"Raj Steel Traders", type:"Supplier", rating:4.5, status:"Active", phone:"9876543211" },
+  { id:3, name:"MK Construction Co.", type:"Contractor", rating:3.8, status:"Active", phone:"9876543212" },
+  { id:4, name:"Gupta Electricals", type:"Subcontractor", rating:4.0, status:"Active", phone:"9876543213" },
+  { id:5, name:"Sharma Plumbing Works", type:"Subcontractor", rating:3.5, status:"Active", phone:"9876543214" }
+];
+
+const MATERIAL_REQUESTS = [
+  { id:"MR-001", material:"TMT Steel 12mm", qty:"500 kg", stage:"Structure", status:"Delivered", date:"2026-01-15", by:"Ramesh K." },
+  { id:"MR-002", material:"OPC Cement 53 Grade", qty:"200 bags", stage:"Structure", status:"Approved", date:"2026-02-10", by:"Ramesh K." },
+  { id:"MR-003", material:"River Sand", qty:"20 units", stage:"Structure", status:"Pending", date:"2026-02-18", by:"Ramesh K." },
+  { id:"MR-004", material:"M20 Concrete", qty:"30 cum", stage:"Structure", status:"Ordered", date:"2026-02-12", by:"Suresh P." },
+  { id:"MR-005", material:"Bricks (Class A)", qty:"10000 pcs", stage:"Brickwork", status:"Pending", date:"2026-02-19", by:"Ramesh K." }
+];
+
+const DAILY_LOGS = [
+  { date:"2026-02-20", weather:"Sunny", work:"Column casting 2nd floor - 4 columns completed. Formwork for beam B3-B6.", labor:18, issues:"Minor delay in rebar delivery" },
+  { date:"2026-02-19", weather:"Partly Cloudy", work:"Slab reinforcement 1st floor 70% done. Plumbing sleeves placed.", labor:22, issues:"None" },
+  { date:"2026-02-18", weather:"Sunny", work:"Column rebar tying for 2nd floor. Curing of 1st floor slab.", labor:20, issues:"Water supply interrupted for 2 hours" }
+];
+
+const INSPECTIONS = [
+  { id:"INS-001", stage:"Foundation", date:"2025-12-14", by:"Vijay R.", status:"Passed", defects:0 },
+  { id:"INS-002", stage:"Structure", date:"2026-02-05", by:"Vijay R.", status:"Conditional", defects:1 },
+  { id:"INS-003", stage:"Structure", date:"2026-02-20", by:"Vijay R.", status:"Scheduled", defects:0 }
+];
+
+const DEFECTS = [
+  { id:"DEF-001", inspection:"INS-002", desc:"Honeycombing in column C3", severity:"High", status:"In Progress", assigned:"MK Construction Co." },
+  { id:"DEF-002", inspection:"INS-002", desc:"Minor crack in beam B2 junction", severity:"Medium", status:"Open", assigned:"MK Construction Co." }
+];
+
+const EXPENSES = [
+  { id:1, date:"2026-02-18", category:"Material", desc:"TMT Steel 12mm - 500kg", amount:225000, stage:"Structure", status:"Posted" },
+  { id:2, date:"2026-02-15", category:"Labor", desc:"Mason team wages - Week 6", amount:48000, stage:"Structure", status:"Approved" },
+  { id:3, date:"2026-02-12", category:"Material", desc:"OPC Cement 200 bags", amount:72000, stage:"Structure", status:"Pending" },
+  { id:4, date:"2026-02-10", category:"Equipment", desc:"Crane rental - 3 days", amount:36000, stage:"Structure", status:"Posted" },
+  { id:5, date:"2026-02-08", category:"Labor", desc:"Electrician advance", amount:15000, stage:"Electrical & Plumbing", status:"Approved" }
+];
+
+const PAYMENTS = [
+  { id:"PAY-001", vendor:"MK Construction Co.", stage:"Foundation", amount:450000, status:"Paid", date:"2025-12-20" },
+  { id:"PAY-002", vendor:"MK Construction Co.", stage:"Structure", amount:350000, status:"Under Review", date:"2026-02-15" },
+  { id:"PAY-003", vendor:"Ambuja Cement Dealers", stage:"Structure", amount:225000, status:"Approved", date:"2026-02-18" },
+  { id:"PAY-004", vendor:"Gupta Electricals", stage:"Electrical & Plumbing", amount:80000, status:"Draft", date:"2026-02-20" }
+];
+
+const INVENTORY = [
+  { material:"OPC Cement 53 Grade", unit:"bags", inward:400, consumed:310, stock:90, wastage:"2.3%" },
+  { material:"TMT Steel 12mm", unit:"kg", inward:1200, consumed:980, stock:220, wastage:"1.8%" },
+  { material:"River Sand", unit:"units", inward:45, consumed:38, stock:7, wastage:"3.1%" },
+  { material:"M20 Concrete", unit:"cum", inward:60, consumed:52, stock:8, wastage:"1.2%" },
+  { material:"Bricks Class A", unit:"pcs", inward:15000, consumed:14200, stock:800, wastage:"4.5%" }
+];
+
+// ========== STAGE DETAILS WITH SUB-STAGES & CHECKLISTS ==========
+const STAGE_DETAILS = {
+  1: {
+    name: "Planning & Design", description: "Comprehensive site analysis, architectural design, structural engineering, and project planning before construction begins.",
+    substages: [
+      { name:"Site Survey & Soil Investigation", completion:100, status:"completed",
+        checklist:[
+          {item:"Topographical survey completed with contour mapping at 0.5m intervals",std:"IS 1892:1979",mandatory:true,checked:true},
+          {item:"Soil boring test conducted at minimum 2 locations per 200 sqm",std:"IS 2720 (All Parts)",mandatory:true,checked:true},
+          {item:"Standard Penetration Test (SPT) performed to determine bearing capacity",std:"IS 2131:1981",mandatory:true,checked:true},
+          {item:"Soil classification report prepared (type, moisture, pH, sulphate content)",std:"IS 1498:1970",mandatory:true,checked:true},
+          {item:"Safe bearing capacity of soil determined and documented",std:"IS 6403:1981",mandatory:true,checked:true},
+          {item:"Ground water table level recorded",std:"IS 2720-Part 2",mandatory:false,checked:true},
+          {item:"Chemical analysis of soil for aggressive conditions (sulphates, chlorides)",std:"IS 2720-Part 26",mandatory:false,checked:true}
+        ]
+      },
+      { name:"Architectural Design & Planning", completion:100, status:"completed",
+        checklist:[
+          {item:"Floor plans comply with local building bye-laws (setbacks, FAR, coverage)",std:"NBC 2016 Part 3",mandatory:true,checked:true},
+          {item:"Minimum room dimensions met: Habitable room ≥ 9.5 sqm, Kitchen ≥ 5.0 sqm",std:"NBC 2016 Cl. 8.2",mandatory:true,checked:true},
+          {item:"Minimum ceiling height 2.75m for habitable rooms, 2.4m for others",std:"NBC 2016 Cl. 8.4",mandatory:true,checked:true},
+          {item:"Ventilation openings ≥ 1/6th of floor area for habitable rooms",std:"NBC 2016 Cl. 8.5",mandatory:true,checked:true},
+          {item:"Staircase width ≥ 1.0m, riser ≤ 190mm, tread ≥ 250mm for residential",std:"NBC 2016 Cl. 8.7",mandatory:true,checked:true},
+          {item:"Parking provisions as per local authority norms",std:"Local Bye-Laws",mandatory:true,checked:true},
+          {item:"Fire safety provisions including exit routes and fire extinguisher locations",std:"NBC 2016 Part 4",mandatory:false,checked:true},
+          {item:"Barrier-free accessibility features for persons with disability",std:"NBC 2016 Cl. 11",mandatory:false,checked:true}
+        ]
+      },
+      { name:"Structural Design", completion:100, status:"completed",
+        checklist:[
+          {item:"Structural design performed for all load combinations (DL+LL+EQ+Wind)",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Seismic design parameters applied as per applicable zone",std:"IS 1893:2016 Part 1",mandatory:true,checked:true},
+          {item:"Foundation design based on safe bearing capacity with adequate FOS ≥ 2.5",std:"IS 1904:1986",mandatory:true,checked:true},
+          {item:"Ductile detailing provisions for earthquake resistance",std:"IS 13920:2016",mandatory:true,checked:true},
+          {item:"Wind load analysis as per basic wind speed of location",std:"IS 875:2015 Part 3",mandatory:true,checked:true},
+          {item:"Deflection limits checked: Span/250 for beams, Span/350 for cantilevers",std:"IS 456:2000 Cl. 23.2",mandatory:true,checked:true},
+          {item:"Minimum reinforcement requirements verified for all elements",std:"IS 456:2000 Cl. 26",mandatory:true,checked:true},
+          {item:"Structural drawings include bar bending schedules",std:"SP 34:1987",mandatory:false,checked:true}
+        ]
+      },
+      { name:"MEP Design (Mechanical, Electrical, Plumbing)", completion:100, status:"completed",
+        checklist:[
+          {item:"Electrical load calculation and distribution board sizing completed",std:"IS 732:1989",mandatory:true,checked:true},
+          {item:"Water supply demand calculation at 135 lpcd per person",std:"IS 1172:1993",mandatory:true,checked:true},
+          {item:"Drainage system designed with self-cleansing velocity ≥ 0.6 m/s",std:"IS 1742:1983",mandatory:true,checked:true},
+          {item:"Earthing system designed (plate/pipe earthing) with resistance < 5 ohms",std:"IS 3043:2018",mandatory:true,checked:true},
+          {item:"Rainwater harvesting system designed as per local requirements",std:"NBC 2016 Part 9",mandatory:false,checked:true},
+          {item:"Solar panel provision allocated on roof area",std:"NBC 2016 Part 11",mandatory:false,checked:true}
+        ]
+      },
+      { name:"BOQ Preparation & Cost Estimation", completion:100, status:"completed",
+        checklist:[
+          {item:"Detailed Bill of Quantities prepared with item-wise breakdown",std:"IS 1200 (All Parts)",mandatory:true,checked:true},
+          {item:"Material quantities computed using standard methods of measurement",std:"IS 1200:1992",mandatory:true,checked:true},
+          {item:"Rate analysis done for each item based on current DSR/SSR rates",std:"CPWD/State PWD DSR",mandatory:true,checked:true},
+          {item:"Contingency provision (3-5%) included in estimate",std:"CPWD Manual",mandatory:false,checked:true},
+          {item:"Escalation clause provision included for long-duration projects",std:"CPWD Manual",mandatory:false,checked:true}
+        ]
+      }
+    ]
+  },
+  2: {
+    name: "Approvals & Permits", description: "Obtaining all statutory approvals, permits, and clearances from local authorities before construction commences.",
+    substages: [
+      { name:"Building Plan Submission & Approval", completion:100, status:"completed",
+        checklist:[
+          {item:"Building plan submitted with site plan showing setbacks and access road",std:"Local Building Bye-Laws",mandatory:true,checked:true},
+          {item:"Floor plans, sections, and elevations as per sanctioned layout",std:"NBC 2016 Part 3",mandatory:true,checked:true},
+          {item:"FAR/FSI calculation within permissible limits",std:"Local Bye-Laws",mandatory:true,checked:true},
+          {item:"Ground coverage within permissible limits",std:"Local Bye-Laws",mandatory:true,checked:true},
+          {item:"Setback compliance: Front, rear, and side margins verified",std:"Local Bye-Laws",mandatory:true,checked:true},
+          {item:"Height restriction compliance as per zone/road width",std:"Local Bye-Laws",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Structural Stability Certificate", completion:100, status:"completed",
+        checklist:[
+          {item:"Structural stability certificate issued by licensed structural engineer",std:"Local Authority Requirement",mandatory:true,checked:true},
+          {item:"Structural drawings reviewed and stamped by competent authority",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Soil investigation report attached with foundation recommendations",std:"IS 1892:1979",mandatory:true,checked:true},
+          {item:"Seismic compliance certificate for Zone III/IV/V areas",std:"IS 1893:2016",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Environmental & Utility Clearances", completion:100, status:"completed",
+        checklist:[
+          {item:"Water supply connection application submitted to local authority",std:"Local Water Board",mandatory:true,checked:true},
+          {item:"Sewerage connection application submitted",std:"Local Municipality",mandatory:true,checked:true},
+          {item:"Electrical supply connection application to DISCOM/Electricity Board",std:"State Electricity Act",mandatory:true,checked:true},
+          {item:"Tree cutting permission obtained if applicable",std:"Local Authority",mandatory:false,checked:true},
+          {item:"NOC from airport authority if in restricted zone",std:"AAI Guidelines",mandatory:false,checked:true}
+        ]
+      },
+      { name:"Commencement Certificate", completion:100, status:"completed",
+        checklist:[
+          {item:"Commencement certificate obtained from planning authority",std:"Local Building Act",mandatory:true,checked:true},
+          {item:"Boundary demarcation done and verified by authority",std:"Local Survey Dept",mandatory:true,checked:true},
+          {item:"Display board erected at site with sanction details",std:"Local Bye-Laws",mandatory:true,checked:true},
+          {item:"Copy of approved plan available at site",std:"Local Bye-Laws",mandatory:true,checked:true}
+        ]
+      }
+    ]
+  },
+  3: {
+    name: "Foundation", description: "Complete below-ground structural work including excavation, footings, plinth beams, and damp proof course.",
+    substages: [
+      { name:"Site Clearing & Excavation", completion:100, status:"completed",
+        checklist:[
+          {item:"Site cleared of vegetation, debris, and organic matter to min 150mm depth",std:"IS 3764:1992",mandatory:true,checked:true},
+          {item:"Excavation dimensions as per drawing ± 50mm tolerance",std:"IS 3764:1992",mandatory:true,checked:true},
+          {item:"Excavation sides properly sloped or shored for depth > 1.5m",std:"IS 3764:1992 Cl. 5",mandatory:true,checked:true},
+          {item:"Bottom of excavation leveled and compacted to 95% MDD",std:"IS 2720-Part 7",mandatory:true,checked:true},
+          {item:"Dewatering arrangement if groundwater encountered",std:"IS 9759:1981",mandatory:false,checked:true},
+          {item:"Excavated soil stacked minimum 1m away from excavation edge",std:"IS 3764:1992",mandatory:true,checked:true},
+          {item:"Excavation depth verified against drawing before concreting",std:"IS 1200-Part 1",mandatory:true,checked:true}
+        ]
+      },
+      { name:"PCC (Plain Cement Concrete) Bed", completion:100, status:"completed",
+        checklist:[
+          {item:"PCC mix M10 (1:3:6) or M15 (1:2:4) as per design specification",std:"IS 456:2000 Cl. 9",mandatory:true,checked:true},
+          {item:"PCC thickness minimum 100mm (or as per drawing) over entire footing area",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"PCC extends minimum 150mm beyond footing on all sides",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Surface leveled and finished to receive footing formwork",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Curing of PCC for minimum 7 days",std:"IS 456:2000 Cl. 13.5",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Footing Construction", completion:100, status:"completed",
+        checklist:[
+          {item:"Footing dimensions match structural drawing within ±10mm tolerance",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Reinforcement placed as per BBS with correct cover (50mm for earth face)",std:"IS 456:2000 Cl. 26.4",mandatory:true,checked:true},
+          {item:"Clear cover of 50mm maintained on all earth-contact faces",std:"IS 456:2000 Table 16",mandatory:true,checked:true},
+          {item:"Rebar spacing, diameter, and lap lengths verified against drawing",std:"SP 34:1987",mandatory:true,checked:true},
+          {item:"Starter bars/dowels for columns placed at correct position",std:"IS 13920:2016",mandatory:true,checked:true},
+          {item:"Concrete grade as per design (minimum M20 for RCC footings)",std:"IS 456:2000 Cl. 6.1",mandatory:true,checked:true},
+          {item:"Concrete cube samples taken: min 3 cubes per 15 cum or per day",std:"IS 456:2000 Cl. 15.2",mandatory:true,checked:true},
+          {item:"Footing cured for minimum 7 days by ponding or wet burlap",std:"IS 456:2000 Cl. 13.5",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Plinth Beam Construction", completion:100, status:"completed",
+        checklist:[
+          {item:"Plinth beam dimensions as per structural drawing",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Minimum 2 bars of 12mm dia at top and bottom (or as per design)",std:"IS 456:2000 Cl. 26.5",mandatory:true,checked:true},
+          {item:"Stirrup spacing as per design, max 300mm c/c or d/2",std:"IS 456:2000 Cl. 26.5.1.6",mandatory:true,checked:true},
+          {item:"Formwork aligned, plumb, and adequately supported",std:"IS 14687:1999",mandatory:true,checked:true},
+          {item:"Concrete placed without segregation, vibrated properly",std:"IS 456:2000 Cl. 13.3",mandatory:true,checked:true},
+          {item:"Construction joints treated with bonding agent if required",std:"IS 456:2000 Cl. 13.4",mandatory:false,checked:true},
+          {item:"Plinth level verified with respect to datum/benchmark",std:"Site Drawing",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Anti-Termite Treatment", completion:100, status:"completed",
+        checklist:[
+          {item:"Soil treatment with approved termiticide along foundation periphery",std:"IS 6313:2013 Part 2",mandatory:true,checked:true},
+          {item:"Chemical barrier applied at rate of 5 litres/sqm at plinth level",std:"IS 6313:2013 Part 2",mandatory:true,checked:true},
+          {item:"Treatment applied on both sides of foundation walls",std:"IS 6313:2013",mandatory:true,checked:true},
+          {item:"Treatment certificate obtained from licensed pest control agency",std:"IS 6313:2013",mandatory:true,checked:true}
+        ]
+      },
+      { name:"DPC (Damp Proof Course)", completion:100, status:"completed",
+        checklist:[
+          {item:"DPC laid at plinth level (min 150mm above ground level)",std:"IS 2645:2003",mandatory:true,checked:true},
+          {item:"DPC material: 1:1.5:3 cement concrete with waterproofing compound (min 50mm thick)",std:"IS 2645:2003",mandatory:true,checked:true},
+          {item:"DPC continuous across all walls without breaks",std:"IS 2645:2003",mandatory:true,checked:true},
+          {item:"Surface below DPC cleaned and wetted before laying",std:"IS 2645:2003",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Backfilling & Compaction", completion:100, status:"completed",
+        checklist:[
+          {item:"Backfill material free from organic matter, debris, and oversized stones",std:"IS 2720-Part 4",mandatory:true,checked:true},
+          {item:"Backfilling done in layers of max 200mm-300mm thickness",std:"IS 2720-Part 7",mandatory:true,checked:true},
+          {item:"Each layer compacted to minimum 95% of Maximum Dry Density (MDD)",std:"IS 2720-Part 8",mandatory:true,checked:true},
+          {item:"Optimum moisture content maintained during compaction",std:"IS 2720-Part 7",mandatory:true,checked:true},
+          {item:"No backfilling against green concrete (min 7 days curing)",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Sand filling below floor slab minimum 150mm thick, well compacted",std:"IS 2720",mandatory:true,checked:true}
+        ]
+      }
+    ]
+  },
+  4: {
+    name: "Structure", description: "Superstructure construction including columns, beams, slabs, lintel, and staircase for all floors.",
+    substages: [
+      { name:"Column Reinforcement & Casting", completion:80, status:"in-progress",
+        checklist:[
+          {item:"Column rebar as per structural drawing - dia, number, and spacing verified",std:"IS 456:2000 Cl. 26.5.3",mandatory:true,checked:true},
+          {item:"Minimum 4 bars for rectangular columns, 6 bars for circular columns",std:"IS 456:2000 Cl. 26.5.3",mandatory:true,checked:true},
+          {item:"Longitudinal steel: min 0.8% and max 6% of cross-section area",std:"IS 456:2000 Cl. 26.5.3.1",mandatory:true,checked:true},
+          {item:"Lateral ties: min 8mm dia or 1/4 of largest bar, spacing ≤ 300mm",std:"IS 456:2000 Cl. 26.5.3.2",mandatory:true,checked:true},
+          {item:"Lap length minimum 45d for compression, 50d for tension (or as per design)",std:"IS 456:2000 Cl. 26.2.5",mandatory:true,checked:true},
+          {item:"Clear cover 40mm maintained using cover blocks at max 1m spacing",std:"IS 456:2000 Table 16",mandatory:true,checked:true},
+          {item:"Column formwork plumb within ±5mm per 3m height",std:"IS 14687:1999",mandatory:true,checked:true},
+          {item:"Concrete grade M20 or higher as per design, slump 75-100mm",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Concrete vibrated using needle vibrator, no honeycombing",std:"IS 456:2000 Cl. 13.3",mandatory:true,checked:true},
+          {item:"Cube test specimens collected - minimum 3 per batch/day of concreting",std:"IS 516:1959",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Beam Reinforcement & Formwork", completion:70, status:"in-progress",
+        checklist:[
+          {item:"Beam dimensions as per structural drawing within ±5mm tolerance",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Main reinforcement (bottom/top) as per BBS - diameter and number verified",std:"IS 456:2000 Cl. 26.5.1",mandatory:true,checked:true},
+          {item:"Minimum tension steel: 0.85bd/fy (not less than specified)",std:"IS 456:2000 Cl. 26.5.1.1",mandatory:true,checked:true},
+          {item:"Shear stirrups spacing as per design, max d/2 or 300mm",std:"IS 456:2000 Cl. 26.5.1.6",mandatory:true,checked:true},
+          {item:"Extra stirrups at beam-column junction per ductile detailing",std:"IS 13920:2016 Cl. 6.3",mandatory:true,checked:true},
+          {item:"Beam formwork bottom level and alignment checked",std:"IS 14687:1999",mandatory:true,checked:true},
+          {item:"Formwork props/supports adequate for load at minimum 1.2m spacing",std:"IS 14687:1999",mandatory:true,checked:true},
+          {item:"Clear cover 25mm for beams (or as per exposure condition)",std:"IS 456:2000 Table 16",mandatory:true,checked:true},
+          {item:"Side face reinforcement provided if depth > 750mm",std:"IS 456:2000 Cl. 26.5.1.3",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Slab Reinforcement & Casting", completion:55, status:"in-progress",
+        checklist:[
+          {item:"Slab thickness as per drawing, minimum 120mm for residential floors",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Main reinforcement as per drawing, minimum 8mm dia bars",std:"IS 456:2000 Cl. 26.5.2",mandatory:true,checked:true},
+          {item:"Distribution steel minimum 0.12% for HYSD bars (or 0.15% for mild steel)",std:"IS 456:2000 Cl. 26.5.2.1",mandatory:true,checked:true},
+          {item:"Max spacing of bars: min(3d, 300mm) for main, min(5d, 450mm) for distribution",std:"IS 456:2000 Cl. 26.3.3",mandatory:true,checked:true},
+          {item:"Slab formwork level checked with dumpy level - tolerance ±3mm",std:"IS 14687:1999",mandatory:true,checked:true},
+          {item:"Electrical/plumbing sleeves and conduits placed before concreting",std:"IS 732:1989",mandatory:true,checked:true},
+          {item:"Slab concreted in one continuous pour - no cold joints",std:"IS 456:2000 Cl. 13.3",mandatory:true,checked:true},
+          {item:"Concrete surface finished to specified level and slope for drainage",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Ponding curing started within 24 hours, continued for minimum 7 days",std:"IS 456:2000 Cl. 13.5",mandatory:true,checked:true},
+          {item:"Formwork not removed before 14 days for slabs (or as per IS code)",std:"IS 456:2000 Table 11",mandatory:true,checked:true}
+        ]
+      },
+      { name:"Lintel & Chajja (Sunshade)", completion:30, status:"in-progress",
+        checklist:[
+          {item:"Lintel provided over every opening with min 150mm bearing on each side",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Lintel depth minimum 100mm or as per structural design",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Minimum 2 bars of 10mm dia at top and bottom for lintels",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Chajja/sunshade reinforcement as per cantilever design",std:"IS 456:2000",mandatory:true,checked:true},
+          {item:"Chajja slope provided for water drainage (min 1:100)",std:"NBC 2016",mandatory:true,checked:false},
+          {item:"Drip mould provided at chajja edge to prevent water travel along soffit",std:"Good Practice",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Staircase Construction", completion:0, status:"pending",
+        checklist:[
+          {item:"Stair dimensions: width ≥ 1000mm, riser ≤ 190mm, tread ≥ 250mm",std:"NBC 2016 Cl. 8.7",mandatory:true,checked:false},
+          {item:"Riser and tread uniform throughout the flight within ±3mm",std:"NBC 2016 Cl. 8.7",mandatory:true,checked:false},
+          {item:"Waist slab thickness and reinforcement as per structural drawing",std:"IS 456:2000",mandatory:true,checked:false},
+          {item:"Landing provided at every floor level, min 1.0m x 1.0m",std:"NBC 2016",mandatory:true,checked:false},
+          {item:"Handrail height minimum 900mm from nosing line",std:"NBC 2016 Cl. 8.7.5",mandatory:true,checked:false},
+          {item:"Anti-slip nosing treatment on stair treads",std:"NBC 2016",mandatory:false,checked:false},
+          {item:"Maximum 12 risers per flight without landing",std:"NBC 2016",mandatory:true,checked:false}
+        ]
+      }
+    ]
+  },
+  5: {
+    name: "Brickwork", description: "Construction of external walls, internal partitions, and parapet walls using brick/block masonry.",
+    substages: [
+      { name:"External Wall Construction (230mm)", completion:0, status:"pending",
+        checklist:[
+          {item:"Bricks conform to IS standard - min compressive strength 3.5 N/mm² (Class A)",std:"IS 1077:1992",mandatory:true,checked:false},
+          {item:"Bricks soaked in water for minimum 2 hours before use",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Mortar mix CM 1:6 for superstructure (or as per specification)",std:"IS 2250:1981",mandatory:true,checked:false},
+          {item:"Horizontal joints (bed joints) uniform at 10mm ±3mm",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Vertical joints (cross joints) uniform at 10mm, staggered in alternate courses",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Wall plumbness within ±5mm per 3m height",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Toothing/bonding provided at wall junctions as per IS code",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Maximum height of brickwork per day: 1.5m (to prevent settlement)",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Curing of brickwork for minimum 7 days",std:"IS 2212:1991",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Internal Partition Walls (115mm)", completion:0, status:"pending",
+        checklist:[
+          {item:"Partition wall thickness 115mm (half-brick) or as per drawing",std:"IS 1905:1987",mandatory:true,checked:false},
+          {item:"Partition walls bonded to main walls at junctions using L-ties/MS flats",std:"IS 1905:1987",mandatory:true,checked:false},
+          {item:"Door frame positions as per architectural drawing",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"RCC band at lintel level continuous through partition walls (seismic requirement)",std:"IS 4326:2013 Cl. 8.4",mandatory:true,checked:false},
+          {item:"Electrical conduit chase depth not exceeding 1/3 of wall thickness",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Top course below beam/slab filled with mortar after 14 days (allows settlement)",std:"Good Practice",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Parapet Wall Construction", completion:0, status:"pending",
+        checklist:[
+          {item:"Parapet wall height minimum 1.0m above finished floor level of terrace",std:"NBC 2016 Cl. 8.8",mandatory:true,checked:false},
+          {item:"Parapet wall thickness minimum 230mm (or as per design)",std:"NBC 2016",mandatory:true,checked:false},
+          {item:"Parapet wall anchored to roof slab with dowel bars at 600mm c/c",std:"IS 4326:2013",mandatory:true,checked:false},
+          {item:"Coping provided on top of parapet with outward slope for water drainage",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Weep holes (75mm PVC pipes) provided at 2m c/c at terrace floor level",std:"Good Practice",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Masonry Curing & Quality Checks", completion:0, status:"pending",
+        checklist:[
+          {item:"Brickwork cured by sprinkling water for minimum 7 days",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Mortar cube test: min 3 cubes per floor for compressive strength",std:"IS 2250:1981",mandatory:true,checked:false},
+          {item:"Wall alignment and plumbness checked at every 3 courses",std:"IS 2212:1991",mandatory:true,checked:false},
+          {item:"Window and door opening dimensions verified against drawing",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"No through cracks visible in masonry walls",std:"IS 1905:1987",mandatory:true,checked:false}
+        ]
+      }
+    ]
+  },
+  6: {
+    name: "Roofing", description: "Roof slab construction, waterproofing treatment, thermal insulation, and drainage provisions.",
+    substages: [
+      { name:"Roof Slab Casting", completion:0, status:"pending",
+        checklist:[
+          {item:"Roof slab thickness as per design (min 120mm for residential)",std:"IS 456:2000",mandatory:true,checked:false},
+          {item:"Reinforcement as per structural drawing with correct spacing and cover",std:"IS 456:2000 Cl. 26.5.2",mandatory:true,checked:false},
+          {item:"Slope towards rainwater outlets provided (min 1:100)",std:"NBC 2016",mandatory:true,checked:false},
+          {item:"Openings for staircase headroom, tank supports marked accurately",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"Concrete grade as per design, placed and vibrated without cold joints",std:"IS 456:2000",mandatory:true,checked:false},
+          {item:"Curing by ponding for minimum 14 days for roof slab",std:"IS 456:2000 Cl. 13.5",mandatory:true,checked:false},
+          {item:"Formwork removal not before 14 days (or as per design/load conditions)",std:"IS 456:2000 Table 11",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Waterproofing Treatment", completion:0, status:"pending",
+        checklist:[
+          {item:"Roof surface cleaned and all cracks/honeycombing repaired before treatment",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"Waterproofing membrane/coating applied as per manufacturer specification",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"Brick bat coba: 80mm avg. thickness with CM 1:4 mortar with waterproofing compound",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"IPS (Indian Patent Stone) finish: CM 1:2 with 20mm thickness, steel troweled",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"Waterproofing turned up on parapet wall min 300mm above slab level",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"Ponding test conducted for 72 hours - no leakage on soffit below",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"Groove joints provided at 3m x 3m grid on terrace surface",std:"Good Practice",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Thermal Insulation", completion:0, status:"pending",
+        checklist:[
+          {item:"Thermal insulation material: expanded polystyrene/XPS/polyurethane foam as per design",std:"IS 3346:1980",mandatory:true,checked:false},
+          {item:"Insulation thickness as per heat transmission calculation (OTTV compliance)",std:"NBC 2016 Part 11",mandatory:true,checked:false},
+          {item:"Insulation laid on waterproofing layer without puncturing membrane",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Reflective paint/cool roof coating applied if specified",std:"ECBC Guidelines",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Roof Drainage System", completion:0, status:"pending",
+        checklist:[
+          {item:"Rainwater downpipes provided at rate of 1 pipe per 40 sqm roof area",std:"NBC 2016 Part 9",mandatory:true,checked:false},
+          {item:"Downpipe diameter minimum 100mm for roof drainage",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Roof outlets/gully traps installed at lowest points of slope",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Overflow provisions provided at parapet for emergency drainage",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Rainwater connected to rainwater harvesting system/municipal drain",std:"NBC 2016 Part 9",mandatory:true,checked:false}
+        ]
+      }
+    ]
+  },
+  7: {
+    name: "Electrical & Plumbing", description: "Complete electrical wiring, plumbing rough-in, water supply, drainage, and sanitary installations.",
+    substages: [
+      { name:"Electrical Conduit Laying", completion:0, status:"pending",
+        checklist:[
+          {item:"PVC conduit minimum 20mm dia for lighting, 25mm for power circuits",std:"IS 9537:2000",mandatory:true,checked:false},
+          {item:"Conduit runs concealed in walls - chase depth max 1/3 wall thickness",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Junction boxes placed at maximum 4.5m intervals in conduit run",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"No more than 4 right-angle bends between consecutive junction boxes",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Conduit securely fixed to wall with saddle clamps at max 600mm spacing",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Separate conduits for lighting and power circuits",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Switch board heights: 1.2m for general, 2.0m for AC points",std:"IS 732:1989",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Wiring & Distribution Board", completion:0, status:"pending",
+        checklist:[
+          {item:"Wire gauge as per load calculation - min 1.5 sqmm for lighting, 2.5 sqmm for power",std:"IS 694:2010",mandatory:true,checked:false},
+          {item:"Separate circuits for lighting, power, AC, geyser, kitchen heavy loads",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"MCBs sized appropriately for each circuit load rating",std:"IS 8828:1996",mandatory:true,checked:false},
+          {item:"RCCB (30mA) provided for each floor / distribution board",std:"IS 12640:2000",mandatory:true,checked:false},
+          {item:"Phase-neutral colour coding: Red/Yellow/Blue for phase, Black for neutral",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Insulation resistance test: min 1 MΩ between conductors",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"DB mounted at 1.5m height from finished floor level",std:"IS 732:1989",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Earthing & Lightning Protection", completion:0, status:"pending",
+        checklist:[
+          {item:"Earthing system: plate earthing or pipe earthing as per design",std:"IS 3043:2018",mandatory:true,checked:false},
+          {item:"Earth electrode resistance less than 5 ohms (tested with megger)",std:"IS 3043:2018",mandatory:true,checked:false},
+          {item:"Earth pit covered with cast iron frame and accessible for maintenance",std:"IS 3043:2018",mandatory:true,checked:false},
+          {item:"Earth continuity conductor (green/yellow) provided to all socket outlets",std:"IS 3043:2018",mandatory:true,checked:false},
+          {item:"Lightning protection provided for buildings > 15m height (if applicable)",std:"IS 2309:1989",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Plumbing - Water Supply Lines", completion:0, status:"pending",
+        checklist:[
+          {item:"CPVC/PPR pipes for hot water lines, uPVC for cold water distribution",std:"IS 15778:2007 / IS 4985:2000",mandatory:true,checked:false},
+          {item:"Pipe sizing as per fixture unit calculation and simultaneous demand",std:"IS 2065:1983",mandatory:true,checked:false},
+          {item:"All joints pressure tested at 1.5x working pressure for 30 minutes",std:"IS 2065:1983",mandatory:true,checked:false},
+          {item:"Water meter provided at main supply entry point",std:"IS 779:1994",mandatory:true,checked:false},
+          {item:"Stop valves provided at each floor, each toilet/kitchen entry",std:"IS 1172:1993",mandatory:true,checked:false},
+          {item:"Pipes concealed in walls with adequate protection (no direct contact with steel)",std:"Good Practice",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Plumbing - Drainage & Sewage", completion:0, status:"pending",
+        checklist:[
+          {item:"Drainage pipes minimum 100mm dia for soil lines, 75mm for waste lines",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Pipe gradient minimum 1:60 for 100mm pipes, 1:40 for 75mm pipes",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"P-trap/S-trap with 50mm water seal at every fixture connection",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Vent pipe provided (min 75mm) extending 1m above roof level",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Inspection chamber provided at every direction change and junction",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Smoke test or water test conducted for entire drainage system",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Septic tank/sewer connection as per local norms",std:"IS 2470:1985",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Water Tank & Pump Installation", completion:0, status:"pending",
+        checklist:[
+          {item:"Overhead tank capacity: 135 litres/person/day x number of persons x 1 day storage",std:"IS 1172:1993",mandatory:true,checked:false},
+          {item:"Underground sump capacity: min 1 day storage requirement",std:"IS 1172:1993",mandatory:true,checked:false},
+          {item:"Tank waterproofed internally with food-grade waterproofing coating",std:"IS 3370:2009",mandatory:true,checked:false},
+          {item:"Ball valve, overflow pipe, and drain valve installed on all tanks",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Pump capacity matched to head and flow requirements",std:"IS 9079:2002",mandatory:true,checked:false},
+          {item:"Float switch or water level controller installed for auto on/off",std:"Good Practice",mandatory:false,checked:false}
+        ]
+      }
+    ]
+  },
+  8: {
+    name: "Plastering", description: "Internal and external wall plastering, ceiling plastering, and adequate curing of all plastered surfaces.",
+    substages: [
+      { name:"Internal Wall Plastering", completion:0, status:"pending",
+        checklist:[
+          {item:"Wall surface cleaned, joints raked to 10mm depth, and wetted before plastering",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Plaster mix CM 1:6 for internal walls (or CM 1:4 for wet areas)",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Plaster thickness: 12mm single coat (or 15-20mm with 2 coats for uneven walls)",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Chicken mesh/GI wire mesh provided at RCC-brick junction to prevent cracks",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Plaster surface true to plumb, level, and line within ±3mm per 1.5m",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"No hollow sound when tapped (good bond with substrate)",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Neat cement finish on corners and edges (or as per specification)",std:"IS 2402:1963",mandatory:false,checked:false}
+        ]
+      },
+      { name:"External Wall Plastering", completion:0, status:"pending",
+        checklist:[
+          {item:"External plaster mix CM 1:4 or CM 1:5 with waterproofing additive",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Two-coat work: first coat (rough) 12mm, second coat (finish) 8mm",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Total external plaster thickness 18-20mm",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Drip moulds and grooves provided at sills, chajjas, and projections",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Scaffolding safe and adequate for external work at all heights",std:"IS 3696:1987",mandatory:true,checked:false},
+          {item:"Grooves at floor line level to control crack pattern",std:"Good Practice",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Ceiling Plastering", completion:0, status:"pending",
+        checklist:[
+          {item:"Concrete surface hacked/roughened for plaster adhesion",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Ceiling plaster thickness 6-8mm (single coat) with CM 1:4 mix",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Neat cement slurry applied as bonding agent on RCC surface before plaster",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Surface level and flat, verified with straight edge",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"No sagging or undulations visible",std:"IS 2402:1963",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Curing of Plastered Surfaces", completion:0, status:"pending",
+        checklist:[
+          {item:"Curing started after initial set (6-8 hours) by gentle water sprinkling",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Continuous curing for minimum 7 days for all plastered surfaces",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"External walls cured using wet gunny bags/hessian cloth if spray not feasible",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"No premature drying - avoid direct sunlight on fresh plaster",std:"IS 2402:1963",mandatory:true,checked:false},
+          {item:"Final inspection for cracks after curing period - patch repair if needed",std:"IS 2402:1963",mandatory:true,checked:false}
+        ]
+      }
+    ]
+  },
+  9: {
+    name: "Flooring", description: "Floor base preparation, tile/stone/marble laying, skirting, waterproofing in wet areas, and expansion joints.",
+    substages: [
+      { name:"Floor Base Preparation", completion:0, status:"pending",
+        checklist:[
+          {item:"Sub-base compacted to minimum 95% MDD with sand/murum filling",std:"IS 2720-Part 8",mandatory:true,checked:false},
+          {item:"PCC/screed bed (50mm min) laid to correct level and slope",std:"IS 456:2000",mandatory:true,checked:false},
+          {item:"Floor level verified with dumpy/auto level - tolerance ±3mm",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"Waterproofing membrane applied in wet areas (toilets, kitchen, balconies)",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"Waterproofing turned up on walls min 150mm (300mm for shower areas)",std:"IS 3067:1988",mandatory:true,checked:false},
+          {item:"Ponding test for 48 hours in all wet areas before tiling",std:"IS 3067:1988",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Tile / Stone / Marble Laying", completion:0, status:"pending",
+        checklist:[
+          {item:"Tiles/stones soaked in water for min 30 minutes before laying",std:"IS 13753:1993",mandatory:true,checked:false},
+          {item:"Tile adhesive or CM 1:3 mortar bed of adequate thickness (20-25mm)",std:"IS 13753:1993",mandatory:true,checked:false},
+          {item:"Tile joints uniform: 2mm for vitrified, 3-5mm for ceramic, 1-2mm for marble",std:"IS 13753:1993",mandatory:true,checked:false},
+          {item:"All tiles tapped to ensure no hollow spots (100% bond with mortar bed)",std:"IS 13753:1993",mandatory:true,checked:false},
+          {item:"Floor slope towards drain in wet areas: min 1:100",std:"IS 13753:1993",mandatory:true,checked:false},
+          {item:"Cuts neatly done at edges and around fixtures",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Tile pattern and layout as per approved sample/drawing",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"Grout filled in all joints after 24 hours of laying",std:"IS 13753:1993",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Skirting Installation", completion:0, status:"pending",
+        checklist:[
+          {item:"Skirting height: 100mm (or as per specification/drawing)",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"Skirting material matching floor tiles or as specified",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"Skirting aligned level and straight - tolerance ±2mm",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Joint between skirting and floor sealed with appropriate sealant",std:"Good Practice",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Anti-Skid & Special Treatments", completion:0, status:"pending",
+        checklist:[
+          {item:"Anti-skid tiles used in wet areas: bathrooms, balconies, entrance lobby",std:"NBC 2016 Cl. 11",mandatory:true,checked:false},
+          {item:"Coefficient of friction ≥ 0.5 for wet areas (as per tile specification)",std:"IS 13753:1993",mandatory:true,checked:false},
+          {item:"Expansion joints provided at 3-4m intervals in large floor areas",std:"IS 456:2000",mandatory:false,checked:false},
+          {item:"Movement joints at doorway thresholds between different floor finishes",std:"Good Practice",mandatory:false,checked:false},
+          {item:"Floor hardener/polish applied for marble/granite as per specification",std:"Manufacturer Specs",mandatory:false,checked:false}
+        ]
+      }
+    ]
+  },
+  10: {
+    name: "Finishing", description: "Final finishes including painting, door/window installation, kitchen and bathroom fittings, and all fixture installations.",
+    substages: [
+      { name:"Painting - Primer, Putty & Final Coats", completion:0, status:"pending",
+        checklist:[
+          {item:"Surface cleaned of loose particles, dust, and efflorescence",std:"IS 2395:1994",mandatory:true,checked:false},
+          {item:"Primer coat (alkali-resistant) applied on all internal walls and ceilings",std:"IS 2395:1994 Part 1",mandatory:true,checked:false},
+          {item:"Wall putty applied in 2 coats (each max 1.5mm) after primer is dry",std:"Manufacturer Specs",mandatory:true,checked:false},
+          {item:"Surface sanded smooth between putty coats and before paint",std:"IS 2395:1994",mandatory:true,checked:false},
+          {item:"Minimum 2 coats of emulsion paint for interior (or 3 for premium finish)",std:"IS 15489:2004",mandatory:true,checked:false},
+          {item:"External walls: primer + 2 coats exterior emulsion/texture paint",std:"IS 15489:2004",mandatory:true,checked:false},
+          {item:"Enamel paint on all MS/wood surfaces: primer + 2 coats enamel",std:"IS 2932:1993",mandatory:true,checked:false},
+          {item:"Paint coverage as per manufacturer spec (no visible brush marks/roller marks)",std:"IS 2395:1994",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Door & Window Installation", completion:0, status:"pending",
+        checklist:[
+          {item:"Door frame fixed plumb and square - diagonal difference ≤ 3mm",std:"IS 4021:1995",mandatory:true,checked:false},
+          {item:"Main door: min 1.0m x 2.1m, internal doors: min 0.9m x 2.1m",std:"NBC 2016 Cl. 8.3",mandatory:true,checked:false},
+          {item:"Door frame holdfast embedded minimum 100mm in wall, min 3 per side",std:"IS 4021:1995",mandatory:true,checked:false},
+          {item:"Window frames level, plumb, and secure with min 3 holdfasts per side",std:"IS 1361:1978",mandatory:true,checked:false},
+          {item:"Door/window shutters operate smoothly - proper clearance (3mm at top/sides)",std:"IS 4021:1995",mandatory:true,checked:false},
+          {item:"All hardware (hinges, locks, handles, tower bolts) fitted and functional",std:"IS 3564:1996",mandatory:true,checked:false},
+          {item:"Window glazing: min 4mm glass for residential (or as per specification)",std:"IS 2553:1989",mandatory:true,checked:false},
+          {item:"Sealant applied around all window/door frames for waterproofing",std:"Good Practice",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Kitchen Platform & Fittings", completion:0, status:"pending",
+        checklist:[
+          {item:"Kitchen platform height: 850-900mm from finished floor level",std:"NBC 2016 / Ergonomic Std",mandatory:true,checked:false},
+          {item:"Platform constructed with RCC/prefab with granite/marble/tile finish",std:"Site Drawing",mandatory:true,checked:false},
+          {item:"Sink cutout positioned as per drawing with proper slope towards drain",std:"IS 2548:1966",mandatory:true,checked:false},
+          {item:"Waterproofing below sink and cooking area",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Gas pipe connection point and exhaust provision verified",std:"IS 8423:1987",mandatory:true,checked:false},
+          {item:"Dedicated 15A power point for chimney, refrigerator, microwave, mixer",std:"IS 732:1989",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Bathroom Fittings & Fixtures", completion:0, status:"pending",
+        checklist:[
+          {item:"WC (Western/Indian) fixed at correct height and level, firmly secured",std:"IS 2556:2004",mandatory:true,checked:false},
+          {item:"Wash basin fixed at 800mm height from FFL, level and secure",std:"IS 2556:2004",mandatory:true,checked:false},
+          {item:"All taps/faucets installed and tested for leak-free operation",std:"IS 8931:2003",mandatory:true,checked:false},
+          {item:"Floor trap/drain positioned at lowest point of bathroom floor",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Shower area provisions: mixer tap at 1.1m, shower head at 2.0m height",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Mirror, towel rod, soap dish, health faucet installed at standard heights",std:"Good Practice",mandatory:false,checked:false},
+          {item:"All waste pipe connections verified for proper flow and no leaks",std:"IS 1742:1983",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Electrical Fixture Installation", completion:0, status:"pending",
+        checklist:[
+          {item:"All switches, sockets, and boards installed at standard heights",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Switch heights: 1.2m from FFL for general, 2.0m for AC/geyser isolator",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Socket heights: 300mm from FFL for general, 1.2m for kitchen counter",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"5A sockets for lighting/fan, 15A sockets for power/AC/geyser",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"All light fixtures installed and operational",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Ceiling fan hooks tested for 3x fan weight (pull test)",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Final circuit testing: insulation resistance, earth continuity, polarity check",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Electrical completion certificate from licensed electrician obtained",std:"Indian Electricity Rules",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Final Plumbing Fixtures & Testing", completion:0, status:"pending",
+        checklist:[
+          {item:"All water supply points delivering adequate pressure and flow",std:"IS 1172:1993",mandatory:true,checked:false},
+          {item:"Hot water system (geyser/solar heater) installed and tested",std:"IS 2082:1993",mandatory:true,checked:false},
+          {item:"All drain lines tested with water flow - no blockages or slow drainage",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Overhead tank and sump float valves operational",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Water pump auto controller tested for start/stop operation",std:"Good Practice",mandatory:true,checked:false},
+          {item:"No leaks at any joint or connection in entire plumbing system",std:"IS 1742:1983",mandatory:true,checked:false}
+        ]
+      }
+    ]
+  },
+  11: {
+    name: "Handover", description: "Final inspection, testing, snag rectification, documentation, and formal handover to owner with all certificates.",
+    substages: [
+      { name:"Pre-Handover Inspection & Snag List", completion:0, status:"pending",
+        checklist:[
+          {item:"Complete walk-through inspection of all rooms and external areas",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Snag list prepared with photo documentation of every defect/incomplete item",std:"Good Practice",mandatory:true,checked:false},
+          {item:"All doors and windows checked for smooth operation and locking",std:"IS 4021:1995",mandatory:true,checked:false},
+          {item:"All switches, sockets, and lights tested for functionality",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"All plumbing points tested - taps, WC flush, drainage flow",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Floor and wall tile condition checked - no cracks, loose tiles, or grout gaps",std:"IS 13753:1993",mandatory:true,checked:false},
+          {item:"Paint finish inspected for uniform coverage, no patches or peeling",std:"IS 2395:1994",mandatory:true,checked:false},
+          {item:"External areas: driveway, compound wall, gate functionality checked",std:"Site Drawing",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Snag Rectification", completion:0, status:"pending",
+        checklist:[
+          {item:"All snag list items assigned to respective contractors with deadline",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Each rectified item re-inspected and signed off by PM/Engineer",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Paint touch-up completed for any damaged/marked surfaces during snag work",std:"IS 2395:1994",mandatory:true,checked:false},
+          {item:"Final cleaning of all areas after snag rectification work",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Zero open snags before proceeding to handover",std:"Good Practice",mandatory:true,checked:false}
+        ]
+      },
+      { name:"Testing & Commissioning", completion:0, status:"pending",
+        checklist:[
+          {item:"Complete electrical system testing: IR value, earth resistance, load test",std:"IS 732:1989",mandatory:true,checked:false},
+          {item:"Full plumbing pressure test: 1.5x working pressure for 30 min, no leaks",std:"IS 2065:1983",mandatory:true,checked:false},
+          {item:"Drainage system test: flow test at all points, no blockages",std:"IS 1742:1983",mandatory:true,checked:false},
+          {item:"Water pump and tank automation system tested end-to-end",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Fire extinguisher installed at designated locations",std:"NBC 2016 Part 4",mandatory:true,checked:false},
+          {item:"All lifts/elevators tested and safety certified (if applicable)",std:"IS 14665:2000",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Documentation & Certificates", completion:0, status:"pending",
+        checklist:[
+          {item:"Completion certificate obtained from local planning authority",std:"Local Building Act",mandatory:true,checked:false},
+          {item:"Occupancy certificate (OC) applied for and obtained",std:"Local Building Act",mandatory:true,checked:false},
+          {item:"Electrical installation completion certificate from licensed electrician",std:"Indian Electricity Rules",mandatory:true,checked:false},
+          {item:"Structural stability certificate at completion from structural engineer",std:"Local Authority",mandatory:true,checked:false},
+          {item:"As-built drawings (architectural, structural, MEP) prepared and handed over",std:"Good Practice",mandatory:true,checked:false},
+          {item:"All material test reports compiled (concrete cubes, steel, soil)",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Warranty documents for all fixtures, equipment, and waterproofing",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Vendor/contractor contact list for warranty claims",std:"Good Practice",mandatory:false,checked:false}
+        ]
+      },
+      { name:"Formal Handover to Owner", completion:0, status:"pending",
+        checklist:[
+          {item:"All keys (main door, rooms, gate, meter box) handed over with register",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Owner walk-through conducted with PM explaining all systems",std:"Good Practice",mandatory:true,checked:false},
+          {item:"User manuals for all equipment (pump, geyser, electrical panels) provided",std:"Good Practice",mandatory:true,checked:false},
+          {item:"Maintenance schedule document provided (annual checks, painting cycle, etc.)",std:"Good Practice",mandatory:false,checked:false},
+          {item:"Defect liability period terms communicated (typically 12 months)",std:"Contract Terms",mandatory:true,checked:false},
+          {item:"Formal handover document signed by owner, PM, and contractor",std:"Good Practice",mandatory:true,checked:false}
+        ]
+      }
+    ]
+  }
+};
+
+// ========== STATE MACHINE DEFINITIONS (from statemachine-ui.txt) ==========
+const STATE_MACHINES = {
+  project: {
+    name:"Project Lifecycle", entity:"Project",
+    states:["Draft","Budget Pending","Active","On Hold","Completed","Archived"],
+    current:"Active",
+    transitions:[
+      {from:"Draft",to:"Budget Pending",trigger:"Budget Created",guard:"BOQ uploaded"},
+      {from:"Budget Pending",to:"Active",trigger:"Budget Approved",guard:"Owner approval recorded"},
+      {from:"Active",to:"On Hold",trigger:"Manual Hold",guard:"PM permission"},
+      {from:"On Hold",to:"Active",trigger:"Resume",guard:"PM permission"},
+      {from:"Active",to:"Completed",trigger:"Final Stage Closed",guard:"All stages completed"},
+      {from:"Completed",to:"Archived",trigger:"Archive",guard:"Owner approval"}
+    ]
+  },
+  stage: {
+    name:"Stage Execution", entity:"Project_Stage",
+    states:["Not Started","In Progress","Inspection Pending","Rework Required","Completed","Locked"],
+    current:"In Progress",
+    transitions:[
+      {from:"Not Started",to:"In Progress",trigger:"Start Stage",guard:"Previous stage completed"},
+      {from:"In Progress",to:"Inspection Pending",trigger:"Tasks ≥ 95%",guard:"Mandatory checklist ready"},
+      {from:"Inspection Pending",to:"Completed",trigger:"Inspection Passed",guard:"No critical defects"},
+      {from:"Inspection Pending",to:"Rework Required",trigger:"Inspection Failed",guard:"Defects created"},
+      {from:"Rework Required",to:"Inspection Pending",trigger:"Rework Done",guard:"Defects resolved"},
+      {from:"Completed",to:"Locked",trigger:"Payment Released",guard:"Accounts confirmation"}
+    ],
+    rules:["Cannot revert from Locked","Cannot skip stage sequence","Payment blocked if stage ≠ Completed"]
+  },
+  material: {
+    name:"Material Request", entity:"Material_Request",
+    states:["Draft","Submitted","Approved","Rejected","Ordered","Delivered","Closed"],
+    current:"Submitted",
+    transitions:[
+      {from:"Draft",to:"Submitted",trigger:"Submit Request",guard:"All items entered"},
+      {from:"Submitted",to:"Approved",trigger:"PM Approves",guard:"Budget available"},
+      {from:"Submitted",to:"Rejected",trigger:"PM Rejects",guard:"Reason mandatory"},
+      {from:"Approved",to:"Ordered",trigger:"PO Generated",guard:"Vendor assigned"},
+      {from:"Ordered",to:"Delivered",trigger:"Delivery Logged",guard:"GRN matched"},
+      {from:"Delivered",to:"Closed",trigger:"Inventory Updated",guard:"Expense posted"}
+    ]
+  },
+  purchaseOrder: {
+    name:"Purchase Order", entity:"Purchase_Order",
+    states:["Created","Issued","Partially Delivered","Delivered","Closed","Cancelled"],
+    current:"Issued",
+    transitions:[
+      {from:"Created",to:"Issued",trigger:"Issue PO",guard:"Vendor confirmed"},
+      {from:"Issued",to:"Partially Delivered",trigger:"Partial Delivery",guard:"GRN partial"},
+      {from:"Issued",to:"Delivered",trigger:"Full Delivery",guard:"GRN complete"},
+      {from:"Partially Delivered",to:"Delivered",trigger:"Remaining Delivered",guard:"GRN matched"},
+      {from:"Delivered",to:"Closed",trigger:"Close PO",guard:"Inventory reconciled"},
+      {from:"Created",to:"Cancelled",trigger:"Cancel",guard:"No delivery exists"}
+    ]
+  },
+  payment: {
+    name:"Payment Request", entity:"Stage_Payment",
+    states:["Draft","Submitted","Under Review","Approved","Rejected","Paid"],
+    current:"Under Review",
+    transitions:[
+      {from:"Draft",to:"Submitted",trigger:"Contractor Submit",guard:"Stage ≥ 80%"},
+      {from:"Submitted",to:"Under Review",trigger:"Auto",guard:"Budget check passed"},
+      {from:"Under Review",to:"Approved",trigger:"Owner Approves",guard:"Inspection passed"},
+      {from:"Under Review",to:"Rejected",trigger:"Owner Rejects",guard:"Reason mandatory"},
+      {from:"Approved",to:"Paid",trigger:"Accounts Releases",guard:"Funds confirmed"}
+    ],
+    blocking:["Open critical defects","Budget overshoot beyond tolerance","Stage not in Completed"]
+  },
+  inspection: {
+    name:"Inspection & Defect", entity:"Inspection",
+    states:["Scheduled","In Progress","Passed","Failed","Conditional"],
+    current:"Scheduled",
+    transitions:[
+      {from:"Scheduled",to:"In Progress",trigger:"Start Inspection",guard:"Inspector on-site"},
+      {from:"In Progress",to:"Passed",trigger:"All Clear",guard:"No defects found"},
+      {from:"In Progress",to:"Failed",trigger:"Critical Defects",guard:"Defects logged"},
+      {from:"In Progress",to:"Conditional",trigger:"Minor Issues",guard:"Non-critical defects"}
+    ]
+  },
+  expense: {
+    name:"Expense Control", entity:"Expense",
+    states:["Draft","Submitted","Approved","Posted","Locked"],
+    current:"Approved",
+    transitions:[
+      {from:"Draft",to:"Submitted",trigger:"Submit",guard:"Details complete"},
+      {from:"Submitted",to:"Approved",trigger:"PM Approves",guard:"Within budget"},
+      {from:"Approved",to:"Posted",trigger:"Post to Ledger",guard:"Account mapped"},
+      {from:"Posted",to:"Locked",trigger:"Period Close",guard:"Reconciliation done"}
+    ],
+    rules:["Cannot modify after Locked"]
+  }
+};
+
+// ========== SP 62:1997 CHAPTER MAPPING ==========
+const SP62_CHAPTERS = {
+  1: {chapters:[{num:1,title:"Construction Planning & Storage of Materials",note:"PERT/CPM techniques for project scheduling. Safe storage of cement, steel, sand, aggregates. Material stacking requirements and hazard prevention."}], ref:"SP 62 Ch.1"},
+  2: {chapters:[], ref:""},
+  3: {chapters:[
+    {num:2,title:"Earthwork",note:"Soil classification per IS standards. Excavation for various depths. Shoring, timbering, dewatering. Anti-termite soil treatment procedures."},
+    {num:3,title:"Foundations",note:"Construction of shallow, deep, spread and strip foundations. Pile foundations (cast in-situ, precast, timber). Machine and special foundations. Weak soil improvement."},
+    {num:6,title:"Anti-termite Measures",note:"Chemical barrier methods, design criteria for anti-termite shields. Post-construction protection and inspection procedures."}
+  ], ref:"SP 62 Ch.2,3,6"},
+  4: {chapters:[
+    {num:5,title:"Plain and Reinforced Concrete",note:"Cement concrete materials, grades, production, transport, mixing. Concreting in hot/cold weather, underwater. Formwork, striking, reinforcement placement. Cover to reinforcement per IS 456."},
+    {num:8,title:"Steel Construction",note:"Hot rolled sections, tubular sections. Rivets, bolts, high-strength friction grip bolts, welding. Shop and site erection, painting."},
+    {num:17,title:"Special Construction - Earthquake Effects",note:"Construction procedures for earthquake resistance. Seismic zone-based categorization. Ductile detailing for masonry and timber buildings."}
+  ], ref:"SP 62 Ch.5,8,17"},
+  5: {chapters:[
+    {num:4,title:"Masonry",note:"Mortars (cement, cement-lime, lime). Brickwork bonds, blockwork, stonework. Brick/block types, laying procedures, joint thickness. Wall construction with soil cement."}
+  ], ref:"SP 62 Ch.4"},
+  6: {chapters:[
+    {num:11,title:"Roofs and Roofing",note:"Flat roofs (jack-arch, Madras terrace, stone-over-joint, precast). Sloping roofs (wooden shingles, AC sheets, GI sheets). Shell roofs, thatched roofs."},
+    {num:12,title:"Damp-Proofing and Waterproofing",note:"Surface preparation for treatments. Damp-proofing materials and methods (normal/heavy/extra heavy). Waterproofing with bitumen felt, mastic, glass fibre reinforced bitumen."}
+  ], ref:"SP 62 Ch.11,12"},
+  7: {chapters:[
+    {num:7,title:"Doors and Windows (Wood and Metal)",note:"Timber classification, moisture content. Wooden frames, panelled/glazed shutters. Steel and aluminium doors/windows. Hardware fittings per IS standards."},
+    {num:16,title:"Water Supply and Drainage",note:"Piping from mains to building. Potable water principles, pipe laying/jointing. Waste water conveyance, sewage, storm water drainage. Testing and inspection."}
+  ], ref:"SP 62 Ch.7,16"},
+  8: {chapters:[
+    {num:10,title:"Wall and Ceiling Finishes",note:"Lime plaster, cement plaster, cement-lime plaster. External rendered finishes. Facing, veneers, tile/mosaic work. Wall coverings, ceiling coverings. Sulphate content considerations."},
+    {num:13,title:"Joints in Buildings",note:"Expansion and contraction joints. Crack prevention through proper joint design. Moisture/thermal movement effects. Joint locations in walls, roofs, floors."}
+  ], ref:"SP 62 Ch.10,13"},
+  9: {chapters:[
+    {num:9,title:"Floors and Floor Coverings",note:"Brick floors, cement concrete floors (in-situ granolithic, terrazzo, tiles). Industrial floor finishes. Special floors (magnesium oxychloride, rubber, linoleum, epoxy, PVC). Timber floors."}
+  ], ref:"SP 62 Ch.9"},
+  10: {chapters:[
+    {num:14,title:"Whitewashing, Colour Washing & Painting (Calcareous)",note:"Surface preparation for dry calcareous surfaces. Painting new and old surfaces. Primer, undercoat, finishing coats. Efflorescence/fungus treatment."},
+    {num:15,title:"Painting, Varnishing & Allied Finishes (Wood/Metals)",note:"Timber priming, surface preparation. Stopping, filling, staining, finishing. Ferrous metal pretreatment. Non-ferrous metal finishing."},
+    {num:7,title:"Doors and Windows (Wood and Metal)",note:"Installation of frames, shutters, hardware fittings. Glazing specifications per IS 2553."}
+  ], ref:"SP 62 Ch.7,14,15"},
+  11: {chapters:[
+    {num:13,title:"Joints in Buildings",note:"Control of cracks through proper joint design at handover stage verification."},
+    {num:1,title:"Construction Planning & Storage of Materials",note:"Final documentation, as-built drawing preparation, completion certificate procedures."}
+  ], ref:"SP 62 Ch.1,13"}
+};
+
+// ========== AUDIT LOG ==========
+const AUDIT_LOG = [
+  {id:1,timestamp:"2026-02-20 14:30",entity:"Stage",entityId:"Structure",from:"In Progress",to:"In Progress",action:"Task Updated",user:"Ramesh K. (SE)",details:"Column casting 2F - 4 columns completed",type:"info"},
+  {id:2,timestamp:"2026-02-20 10:15",entity:"Material Request",entityId:"MR-003",from:"Draft",to:"Submitted",action:"Request Submitted",user:"Ramesh K. (SE)",details:"River Sand - 20 units for Structure stage",type:"info"},
+  {id:3,timestamp:"2026-02-19 16:45",entity:"Payment",entityId:"PAY-002",from:"Submitted",to:"Under Review",action:"Auto Budget Check",user:"System",details:"Budget check passed. Forwarded for owner review.",type:"warning"},
+  {id:4,timestamp:"2026-02-18 11:20",entity:"Expense",entityId:"EXP-001",from:"Approved",to:"Posted",action:"Expense Posted",user:"Accounts (AC)",details:"TMT Steel 12mm - ₹2,25,000 posted to ledger",type:"success"},
+  {id:5,timestamp:"2026-02-15 09:00",entity:"Material Request",entityId:"MR-002",from:"Submitted",to:"Approved",action:"PM Approved",user:"PM",details:"OPC Cement 200 bags - Budget available, approved",type:"success"},
+  {id:6,timestamp:"2026-02-12 14:10",entity:"Purchase Order",entityId:"PO-2026-003",from:"Created",to:"Issued",action:"PO Issued",user:"Procurement (PR)",details:"TMT Steel 16mm to Raj Steel Traders",type:"info"},
+  {id:7,timestamp:"2026-02-10 10:00",entity:"Inspection",entityId:"INS-002",from:"In Progress",to:"Conditional",action:"Conditional Pass",user:"Vijay R. (QI)",details:"Structure inspection - 1 defect: honeycombing in column C3",type:"warning"},
+  {id:8,timestamp:"2026-02-05 16:00",entity:"Defect",entityId:"DEF-001",from:"Open",to:"Assigned",action:"Defect Assigned",user:"PM",details:"Honeycombing in C3 assigned to MK Construction Co.",type:"danger"},
+  {id:9,timestamp:"2025-12-15 12:00",entity:"Stage",entityId:"Foundation",from:"Inspection Pending",to:"Completed",action:"Inspection Passed",user:"Vijay R. (QI)",details:"All checks passed. No defects. Stage completed.",type:"success"},
+  {id:10,timestamp:"2025-12-14 14:30",entity:"Stage",entityId:"Foundation",from:"In Progress",to:"Inspection Pending",action:"Ready for Inspection",user:"Ramesh K. (SE)",details:"Tasks ≥ 95%. Mandatory checklists completed.",type:"info"},
+  {id:11,timestamp:"2025-10-20 10:00",entity:"Project",entityId:"Kumar Villa",from:"Budget Pending",to:"Active",action:"Budget Approved",user:"Mr. Kumar (Owner)",details:"Total budget ₹85,00,000 approved. Construction begins.",type:"success"},
+  {id:12,timestamp:"2025-09-01 09:00",entity:"Project",entityId:"Kumar Villa",from:"Draft",to:"Budget Pending",action:"BOQ Uploaded",user:"PM",details:"Detailed BOQ with 11 stages prepared and uploaded.",type:"info"}
+];
+
+// ========== NAV CONFIGS PER ROLE ==========
+const NAV_CONFIG = {
+  owner: [
+    { id:"dashboard", icon:"&#9632;", label:"Dashboard" },
+    { id:"stages", icon:"&#9654;", label:"Stage Progress" },
+    { id:"budget", icon:"&#8377;", label:"Budget Overview" },
+    { id:"payments", icon:"&#128179;", label:"Payments" },
+    { id:"workflows", icon:"&#9881;", label:"Workflows" },
+    { id:"reports", icon:"&#128202;", label:"Reports" },
+    { id:"documents", icon:"&#128196;", label:"Documents" }
+  ],
+  pm: [
+    { id:"dashboard", icon:"&#9632;", label:"Dashboard" },
+    { id:"stages", icon:"&#9654;", label:"Stages" },
+    { id:"tasks", icon:"&#9745;", label:"Tasks" },
+    { id:"materials", icon:"&#128230;", label:"Material Requests" },
+    { id:"vendors", icon:"&#128101;", label:"Vendors" },
+    { id:"quality", icon:"&#10003;", label:"Quality" },
+    { id:"budget", icon:"&#8377;", label:"Budget" },
+    { id:"workflows", icon:"&#9881;", label:"Workflows" },
+    { id:"auditlog", icon:"&#128220;", label:"Audit Log" },
+    { id:"reports", icon:"&#128202;", label:"Reports" }
+  ],
+  engineer: [
+    { id:"dashboard", icon:"&#9632;", label:"Today" },
+    { id:"materials", icon:"&#128230;", label:"Materials" },
+    { id:"labor", icon:"&#128119;", label:"Labor" },
+    { id:"quality", icon:"&#10003;", label:"Quality" },
+    { id:"upload", icon:"&#128247;", label:"Upload" }
+  ],
+  contractor: [
+    { id:"dashboard", icon:"&#9632;", label:"My Stages" },
+    { id:"progress", icon:"&#9654;", label:"Submit Progress" },
+    { id:"payments", icon:"&#128179;", label:"Payment Requests" },
+    { id:"documents", icon:"&#128196;", label:"Documents" }
+  ],
+  procurement: [
+    { id:"dashboard", icon:"&#9632;", label:"Dashboard" },
+    { id:"materials", icon:"&#128230;", label:"Material Requests" },
+    { id:"vendors", icon:"&#128101;", label:"Vendors" },
+    { id:"po", icon:"&#128220;", label:"Purchase Orders" },
+    { id:"inventory", icon:"&#128230;", label:"Inventory" }
+  ],
+  accounts: [
+    { id:"dashboard", icon:"&#9632;", label:"Dashboard" },
+    { id:"payments", icon:"&#128179;", label:"Pending Payments" },
+    { id:"expenses", icon:"&#8377;", label:"Expenses" },
+    { id:"cashflow", icon:"&#128202;", label:"Cash Flow" },
+    { id:"reports", icon:"&#128202;", label:"Reports" }
+  ],
+  inspector: [
+    { id:"dashboard", icon:"&#9632;", label:"Dashboard" },
+    { id:"quality", icon:"&#10003;", label:"Inspections" },
+    { id:"defects", icon:"&#9888;", label:"Defects" },
+    { id:"stages", icon:"&#9654;", label:"Stage Review" },
+    { id:"reports", icon:"&#128202;", label:"Reports" }
+  ]
+};
+
+// ========== APP STATE ==========
+let currentRole = 'pm';
+let currentPage = 'dashboard';
+let selectedStageId = null;
+
+// ========== HELPER FUNCTIONS ==========
+function fmt(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+function statusBadge(s) {
+  const map = { completed:'green', 'in-progress':'blue', pending:'gray', blocked:'red',
+    Passed:'green', Failed:'red', Conditional:'yellow', Scheduled:'blue',
+    Delivered:'green', Approved:'green', Pending:'yellow', Ordered:'blue', Rejected:'red',
+    Paid:'green', 'Under Review':'yellow', Draft:'gray', Active:'green', Open:'red',
+    'In Progress':'blue', Posted:'green', Closed:'gray' };
+  return `<span class="badge-pill badge-${map[s]||'gray'}">${s}</span>`;
+}
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+function stageClass(s) { return s==='completed'?'completed':s==='in-progress'?'in-progress':s==='blocked'?'blocked':'pending'; }
+
+// ========== LOGIN / LOGOUT ==========
+function doLogin() {
+  currentRole = document.getElementById('loginRole').value;
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  buildSidebar();
+  navigateTo('dashboard');
+}
+function doLogout() {
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('loginPage').style.display = 'flex';
+}
+
+// ========== SIDEBAR ==========
+function buildSidebar() {
+  const roleNames = { owner:'OWNER', pm:'PROJECT MANAGER', engineer:'SITE ENGINEER', contractor:'CONTRACTOR', procurement:'PROCUREMENT', accounts:'ACCOUNTS', inspector:'QUALITY INSPECTOR' };
+  const avatarMap = { owner:'OW', pm:'PM', engineer:'SE', contractor:'CO', procurement:'PR', accounts:'AC', inspector:'QI' };
+  document.getElementById('roleBadge').textContent = roleNames[currentRole];
+  document.getElementById('userAvatar').textContent = avatarMap[currentRole];
+  const nav = document.getElementById('sidebarNav');
+  nav.innerHTML = NAV_CONFIG[currentRole].map(item =>
+    `<a href="#" data-page="${item.id}" onclick="navigateTo('${item.id}')" class="${item.id==='dashboard'?'active':''}">
+      <span class="nav-icon">${item.icon}</span>${item.label}</a>`
+  ).join('');
+}
+
+// ========== NAVIGATION ==========
+function navigateTo(page) {
+  currentPage = page;
+  const sidebarPage = page === 'stageDetail' ? 'stages' : page;
+  document.querySelectorAll('#sidebarNav a').forEach(a => a.classList.toggle('active', a.dataset.page===sidebarPage));
+  const titles = { dashboard:'Dashboard', stages:'Stage Progress', budget:'Budget & Cost Control', payments:'Payments',
+    reports:'Reports', documents:'Documents', tasks:'Task Management', materials:'Material Requests',
+    vendors:'Vendors & Contractors', quality:'Quality & Inspections', labor:'Labor Management',
+    upload:'Upload & Photos', progress:'Submit Progress', po:'Purchase Orders', inventory:'Inventory',
+    expenses:'Expenses', cashflow:'Cash Flow', workflows:'Workflow State Machines', auditlog:'Audit Trail',
+    defects:'Defect Management',
+    stageDetail: selectedStageId ? 'Stage ' + selectedStageId + ' Details' : 'Stage Details' };
+  document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+  renderPage();
+}
+
+function openStageDetail(stageId) {
+  selectedStageId = stageId;
+  navigateTo('stageDetail');
+}
+
+function toggleSubstage(idx) {
+  const body = document.getElementById('ssBody' + idx);
+  const arrow = document.getElementById('ssArrow' + idx);
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function toggleCheck(stageId, ssIdx, clIdx) {
+  STAGE_DETAILS[stageId].substages[ssIdx].checklist[clIdx].checked =
+    !STAGE_DETAILS[stageId].substages[ssIdx].checklist[clIdx].checked;
+}
+
+// ========== PAGE RENDERER ==========
+function renderPage() {
+  const el = document.getElementById('mainContent');
+  const fn = PAGE_RENDERERS[currentRole+'_'+currentPage] || PAGE_RENDERERS[currentPage] || PAGE_RENDERERS['default_dashboard'];
+  el.innerHTML = fn();
+}
+
+// ========== PAGE TEMPLATES ==========
+const PAGE_RENDERERS = {};
+
+// ---------- OWNER DASHBOARD ----------
+PAGE_RENDERERS['owner_dashboard'] = () => `
+  <div class="alert alert-info">&#128712; Welcome back! Your Kumar Villa project is <b>38% complete</b>. Current stage: <b>Structure</b>.</div>
+  <div class="panel" style="margin-bottom:20px">
+    <div class="panel-head"><h3>Project Lifecycle</h3><span class="badge-pill badge-blue">Active</span></div>
+    <div class="panel-body">
+      <div class="sm-flow">
+        <div class="sm-node completed-state">Draft</div><span class="sm-arrow active-arrow">&#8594;</span>
+        <div class="sm-node completed-state">Budget Pending</div><span class="sm-arrow active-arrow">&#8594;</span>
+        <div class="sm-node active-state highlight">Active</div><span class="sm-arrow">&#8594;</span>
+        <div class="sm-node draft">On Hold</div><span class="sm-arrow">&#8594;</span>
+        <div class="sm-node draft">Completed</div><span class="sm-arrow">&#8594;</span>
+        <div class="sm-node draft">Archived</div>
+      </div>
+      <div class="sm-legend" style="margin-top:8px">
+        <span><span class="dot" style="background:#dcfce7;border:2px solid #16a34a"></span> Done</span>
+        <span><span class="dot" style="background:#dbeafe;border:2px solid #3b82f6"></span> Current</span>
+        <span><span class="dot" style="background:#f3f4f6;border:2px solid #9ca3af"></span> Ahead</span>
+      </div>
+    </div>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><h3>Overall Completion</h3><div class="stat-icon blue">&#9654;</div></div>
+      <div class="big-num">${PROJECT.completion}%</div>
+      <div class="progress" style="margin-top:10px"><div class="progress-fill" style="width:${PROJECT.completion}%;background:var(--primary)"></div></div>
+      <div class="change up" style="margin-top:6px">Stage 4 of 11</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Total Budget</h3><div class="stat-icon green">&#8377;</div></div>
+      <div class="big-num">${fmt(PROJECT.totalBudget)}</div>
+      <div class="change">Allocated for full project</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Spent So Far</h3><div class="stat-icon yellow">&#8377;</div></div>
+      <div class="big-num">${fmt(PROJECT.spent)}</div>
+      <div class="change ${PROJECT.spent/PROJECT.totalBudget>.45?'down':'up'}">${((PROJECT.spent/PROJECT.totalBudget)*100).toFixed(1)}% of budget used</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Delay Risk</h3><div class="stat-icon red">&#9888;</div></div>
+      <div class="big-num" style="color:var(--warning)">Medium</div>
+      <div class="change down">~12 days behind schedule</div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Stage Progress Timeline</h3></div>
+      <div class="panel-body">
+        <div class="stage-timeline">
+          ${STAGES.map((s,i) => `<div class="stage-item ${stageClass(s.status)}"><span class="stage-num">${i+1}</span>${s.name.split(' ')[0]}</div>`).join('')}
+        </div>
+        <table style="margin-top:16px">
+          <tr><th>Stage</th><th>Status</th><th>Completion</th><th>Budget Spent</th></tr>
+          ${STAGES.filter(s=>s.status!=='pending').map(s=>`<tr>
+            <td>${s.name}</td><td>${statusBadge(s.status)}</td>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="progress" style="width:80px"><div class="progress-fill" style="width:${s.completion}%;background:${s.completion===100?'var(--success)':'var(--primary)'}"></div></div>${s.completion}%</div></td>
+            <td>${fmt(s.spent)} / ${fmt(s.budget)}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Budget Overview</h3></div>
+      <div class="panel-body">
+        <div style="display:flex;justify-content:space-between;margin-bottom:20px">
+          <div><div style="font-size:.8rem;color:var(--gray-500)">Remaining</div><div style="font-size:1.3rem;font-weight:700;color:var(--success)">${fmt(PROJECT.totalBudget-PROJECT.spent)}</div></div>
+          <div><div style="font-size:.8rem;color:var(--gray-500)">Forecast Overrun</div><div style="font-size:1.3rem;font-weight:700;color:var(--warning)">${fmt(320000)}</div></div>
+        </div>
+        <div class="chart-bar">
+          ${STAGES.slice(0,7).map(s=>{const h=Math.max(8,s.budget/2200000*160);const sh=s.spent/2200000*160;return `<div class="bar-col"><div class="bar-val">${(s.spent/1000).toFixed(0)}k</div><div class="bar" style="height:${h}px;background:var(--gray-200);position:relative"><div style="position:absolute;bottom:0;width:100%;height:${sh}px;background:${s.spent>s.budget?'var(--danger)':'var(--primary)'};border-radius:4px 4px 0 0"></div></div><div class="bar-label">${s.name.split(' ')[0].substring(0,6)}</div></div>`}).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Recent Site Photos</h3></div>
+      <div class="panel-body">
+        <div class="photo-grid">
+          ${['Column casting 2F','Slab rebar 1F','Beam formwork','Foundation done'].map((t,i)=>`<div class="photo-card" style="background:linear-gradient(135deg,#cbd5e1,#94a3b8)"><span>&#128247; ${t}</span><div class="photo-date">Feb ${20-i}, 2026</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Pending Approvals</h3></div>
+      <div class="panel-body">
+        <div class="alert alert-warning">&#128179; Payment request from MK Construction: <b>${fmt(350000)}</b> for Structure stage
+          <button class="btn btn-sm btn-success" style="margin-left:auto" onclick="showApproval('Payment Approval','Vendor: MK Construction Co.<br>Stage: Structure (65% complete)<br>Amount: ₹3,50,000<br>Budget remaining: ₹7,50,000')">Review</button>
+        </div>
+        <div class="alert alert-info">&#128196; Drawing revision v3 uploaded for 2nd floor plan
+          <button class="btn btn-sm btn-outline" style="margin-left:auto">View</button>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- PM DASHBOARD ----------
+PAGE_RENDERERS['pm_dashboard'] = () => `
+  <div class="panel" style="margin-bottom:20px">
+    <div class="panel-head"><h3>Stage Execution Workflow</h3><span class="badge-pill badge-blue">Structure: In Progress</span></div>
+    <div class="panel-body">
+      <div class="sm-flow">
+        ${STATE_MACHINES.stage.states.map((s,i)=>{
+          const cls = s==='In Progress'?'active-state highlight':s==='Not Started'?'completed-state':s==='Locked'?'locked-state':'draft';
+          return `<div class="sm-node ${cls}" style="font-size:.78rem;padding:8px 12px">${s}</div>${i<STATE_MACHINES.stage.states.length-1?'<span class="sm-arrow'+(i<1?' active-arrow':'')+'">&#8594;</span>':''}`;
+        }).join('')}
+      </div>
+      <div class="transition-actions" style="margin-top:10px">
+        <button class="btn-transition advance" disabled title="Structure at 65% - needs ≥ 95%">&#10003; Request Inspection</button>
+        <button class="btn-transition hold" onclick="showApproval('Hold Project','Are you sure you want to put the project on hold?<br><br>Guard: PM permission required')">&#9208; Put On Hold</button>
+        <span class="guard-badge unmet">Tasks: 65% (need ≥95%)</span>
+        <span class="guard-badge unmet">2 open defects</span>
+      </div>
+    </div>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><h3>Active Stages</h3><div class="stat-icon blue">&#9654;</div></div>
+      <div class="big-num">1</div>
+      <div class="change">Structure - 65% complete</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Pending Approvals</h3><div class="stat-icon yellow">&#9888;</div></div>
+      <div class="big-num">4</div>
+      <div class="change down">2 material, 1 payment, 1 inspection</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Budget Variance</h3><div class="stat-icon red">&#8377;</div></div>
+      <div class="big-num" style="color:var(--danger)">+3.8%</div>
+      <div class="change down">₹3,20,000 over forecast</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Open Defects</h3><div class="stat-icon red">&#9888;</div></div>
+      <div class="big-num">2</div>
+      <div class="change down">1 High severity</div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Pending Material Requests</h3><button class="btn btn-sm btn-primary" onclick="navigateTo('materials')">View All</button></div>
+      <div class="panel-body">
+        <table>
+          <tr><th>ID</th><th>Material</th><th>Qty</th><th>Stage</th><th>Action</th></tr>
+          ${MATERIAL_REQUESTS.filter(m=>m.status==='Pending').map(m=>`<tr>
+            <td>${m.id}</td><td>${m.material}</td><td>${m.qty}</td><td>${m.stage}</td>
+            <td><button class="btn btn-sm btn-success" onclick="showApproval('Approve Material Request','Material: ${m.material}<br>Quantity: ${m.qty}<br>Stage: ${m.stage}<br>Requested by: ${m.by}<br>Budget available: ₹7,50,000')">Approve</button></td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Today's Site Summary</h3></div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div style="background:var(--gray-50);padding:12px;border-radius:8px"><div style="font-size:.78rem;color:var(--gray-500)">Weather</div><div style="font-weight:600">&#9728; Sunny, 32°C</div></div>
+          <div style="background:var(--gray-50);padding:12px;border-radius:8px"><div style="font-size:.78rem;color:var(--gray-500)">Labor on Site</div><div style="font-weight:600">18 workers</div></div>
+        </div>
+        <div style="font-size:.88rem;line-height:1.6"><b>Work Done:</b> ${DAILY_LOGS[0].work}<br><b>Issues:</b> <span style="color:var(--warning)">${DAILY_LOGS[0].issues}</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Stage Progress</h3></div>
+      <div class="panel-body">
+        <div class="stage-timeline">
+          ${STAGES.map((s,i) => `<div class="stage-item ${stageClass(s.status)}"><span class="stage-num">${i+1}</span>${s.name.split(' ')[0]}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Upcoming Inspections</h3></div>
+      <div class="panel-body">
+        <table>
+          <tr><th>ID</th><th>Stage</th><th>Date</th><th>Status</th></tr>
+          ${INSPECTIONS.map(i=>`<tr><td>${i.id}</td><td>${i.stage}</td><td>${i.date}</td><td>${statusBadge(i.status)}</td></tr>`).join('')}
+        </table>
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- STAGES PAGE ----------
+PAGE_RENDERERS['stages'] = () => {
+  const totalChecks = Object.values(STAGE_DETAILS).reduce((a,sd)=>a+sd.substages.reduce((b,ss)=>b+ss.checklist.length,0),0);
+  const doneChecks = Object.values(STAGE_DETAILS).reduce((a,sd)=>a+sd.substages.reduce((b,ss)=>b+ss.checklist.filter(c=>c.checked).length,0),0);
+  return `
+  <div class="stage-timeline" style="margin-bottom:24px">
+    ${STAGES.map((s,i) => `<div class="stage-item ${stageClass(s.status)}" style="cursor:pointer" onclick="openStageDetail(${s.id})" title="Click to view sub-stages"><span class="stage-num">${i+1}</span>${s.name.split(' ')[0]}</div>`).join('')}
+  </div>
+  <div class="cards" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="card"><div class="card-header"><h3>Total Stages</h3></div><div class="big-num">11</div></div>
+    <div class="card"><div class="card-header"><h3>Total Sub-stages</h3></div><div class="big-num">${Object.values(STAGE_DETAILS).reduce((a,sd)=>a+sd.substages.length,0)}</div></div>
+    <div class="card"><div class="card-header"><h3>Total Checklists</h3></div><div class="big-num">${totalChecks}</div></div>
+    <div class="card"><div class="card-header"><h3>Checks Completed</h3></div><div class="big-num" style="color:var(--success)">${doneChecks}</div><div class="change">${((doneChecks/totalChecks)*100).toFixed(1)}% overall</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>All Stages</h3><span style="font-size:.82rem;color:var(--gray-500)">Click any stage to view sub-stages & building standard checklists</span></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>#</th><th>Stage Name</th><th>Sub-stages</th><th>Status</th><th>Completion</th><th>Budget</th><th>Spent</th><th>Variance</th><th>Checklists</th><th></th></tr>
+        ${STAGES.map((s,i) => {
+          const variance = s.spent - s.budget;
+          const sd = STAGE_DETAILS[s.id];
+          const ssCount = sd ? sd.substages.length : 0;
+          const clTotal = sd ? sd.substages.reduce((a,ss)=>a+ss.checklist.length,0) : 0;
+          const clDone = sd ? sd.substages.reduce((a,ss)=>a+ss.checklist.filter(c=>c.checked).length,0) : 0;
+          return '<tr style="cursor:pointer" onclick="openStageDetail('+s.id+')">' +
+            '<td>'+(i+1)+'</td><td><b>'+s.name+'</b></td>' +
+            '<td><span class="badge-pill badge-blue">'+ssCount+' sub-stages</span></td>' +
+            '<td>'+statusBadge(s.status)+'</td>' +
+            '<td><div style="display:flex;align-items:center;gap:8px"><div class="progress" style="width:60px"><div class="progress-fill" style="width:'+s.completion+'%;background:'+(s.completion===100?'var(--success)':'var(--primary)')+'"></div></div>'+s.completion+'%</div></td>' +
+            '<td>'+fmt(s.budget)+'</td><td>'+fmt(s.spent)+'</td>' +
+            '<td style="color:'+(variance>0?'var(--danger)':'var(--success)')+'">'+(variance>0?'+':'')+fmt(variance)+'</td>' +
+            '<td><span style="font-size:.82rem;color:'+(clDone===clTotal&&clTotal>0?'var(--success)':'var(--gray-600)')+'">'+clDone+'/'+clTotal+'</span></td>' +
+            '<td><button class="btn btn-sm btn-outline" onclick="event.stopPropagation();openStageDetail('+s.id+')">View &rarr;</button></td>' +
+          '</tr>';
+        }).join('')}
+        <tr style="font-weight:700;background:var(--gray-50)">
+          <td colspan="5">Total</td><td>${fmt(STAGES.reduce((a,s)=>a+s.budget,0))}</td>
+          <td>${fmt(STAGES.reduce((a,s)=>a+s.spent,0))}</td><td></td><td></td><td></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+`};
+
+
+// ---------- BUDGET PAGE ----------
+PAGE_RENDERERS['budget'] = () => `
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><h3>Total Budget</h3><div class="stat-icon green">&#8377;</div></div>
+      <div class="big-num">${fmt(PROJECT.totalBudget)}</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Total Spent</h3><div class="stat-icon yellow">&#8377;</div></div>
+      <div class="big-num">${fmt(PROJECT.spent)}</div>
+      <div class="change">${((PROJECT.spent/PROJECT.totalBudget)*100).toFixed(1)}% consumed</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Remaining</h3><div class="stat-icon blue">&#8377;</div></div>
+      <div class="big-num" style="color:var(--success)">${fmt(PROJECT.totalBudget-PROJECT.spent)}</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Forecast Overrun</h3><div class="stat-icon red">&#9888;</div></div>
+      <div class="big-num" style="color:var(--danger)">${fmt(320000)}</div>
+      <div class="change down">+3.8% over budget</div>
+    </div>
+  </div>
+  <div class="tabs" id="budgetTabs">
+    <div class="tab active" onclick="switchTab('budgetTabs','budgetBoq')">BOQ Summary</div>
+    <div class="tab" onclick="switchTab('budgetTabs','budgetExpenses')">Expenses</div>
+    <div class="tab" onclick="switchTab('budgetTabs','budgetChart')">Variance Chart</div>
+  </div>
+  <div class="tab-content active" id="budgetBoq">
+    <div class="panel"><div class="panel-body table-wrap">
+      <table>
+        <tr><th>Stage</th><th>Category</th><th>Estimated</th><th>Actual</th><th>Variance</th><th>Status</th></tr>
+        ${STAGES.filter(s=>s.spent>0).map(s=>{const v=s.spent-s.budget;return `
+        <tr><td>${s.name}</td><td>All</td><td>${fmt(s.budget)}</td><td>${fmt(s.spent)}</td>
+        <td style="color:${v>0?'var(--danger)':'var(--success)'}"><b>${v>0?'+':''}${fmt(v)}</b></td>
+        <td>${v>0?statusBadge('Over Budget'):statusBadge('On Track')}</td></tr>`}).join('')}
+      </table>
+    </div></div>
+  </div>
+  <div class="tab-content" id="budgetExpenses">
+    <div class="panel"><div class="panel-body table-wrap">
+      <table>
+        <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Stage</th><th>Status</th></tr>
+        ${EXPENSES.map(e=>`<tr><td>${e.date}</td><td><span class="badge-pill badge-blue">${e.category}</span></td>
+        <td>${e.desc}</td><td>${fmt(e.amount)}</td><td>${e.stage}</td><td>${statusBadge(e.status)}</td></tr>`).join('')}
+      </table>
+    </div></div>
+  </div>
+  <div class="tab-content" id="budgetChart">
+    <div class="panel"><div class="panel-body">
+      <h4 style="margin-bottom:16px;font-size:.9rem;color:var(--gray-600)">Budget vs Actual by Stage (₹ in Lakhs)</h4>
+      <div class="chart-bar" style="height:220px">
+        ${STAGES.filter(s=>s.budget>0).slice(0,8).map(s=>{
+          const bh=s.budget/2200000*180; const sh=s.spent/2200000*180;
+          return `<div class="bar-col">
+            <div class="bar-val">${(s.spent/100000).toFixed(1)}L</div>
+            <div style="display:flex;gap:3px;align-items:flex-end;height:180px">
+              <div class="bar" style="height:${bh}px;background:var(--gray-300);flex:1"></div>
+              <div class="bar" style="height:${sh}px;background:${s.spent>s.budget?'var(--danger)':'var(--primary)'};flex:1"></div>
+            </div>
+            <div class="bar-label">${s.name.split(' ')[0].substring(0,5)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:20px;justify-content:center;margin-top:12px;font-size:.8rem;color:var(--gray-500)">
+        <span>&#9632; Budget</span><span style="color:var(--primary)">&#9632; Actual</span><span style="color:var(--danger)">&#9632; Over Budget</span>
+      </div>
+    </div></div>
+  </div>
+`;
+
+// ---------- MATERIALS PAGE ----------
+PAGE_RENDERERS['materials'] = () => `
+  <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><div class="card-header"><h3>Total Requests</h3></div><div class="big-num">${MATERIAL_REQUESTS.length}</div></div>
+    <div class="card"><div class="card-header"><h3>Pending Approval</h3></div><div class="big-num" style="color:var(--warning)">${MATERIAL_REQUESTS.filter(m=>m.status==='Pending').length}</div></div>
+    <div class="card"><div class="card-header"><h3>Delivered</h3></div><div class="big-num" style="color:var(--success)">${MATERIAL_REQUESTS.filter(m=>m.status==='Delivered').length}</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Material Requests</h3>
+      <button class="btn btn-sm btn-primary" onclick="showModal('newMaterialModal')">+ New Request</button>
+    </div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>ID</th><th>Material</th><th>Quantity</th><th>Stage</th><th>Requested By</th><th>Date</th><th>Status</th>${currentRole==='pm'?'<th>Action</th>':''}</tr>
+        ${MATERIAL_REQUESTS.map(m=>`<tr>
+          <td><b>${m.id}</b></td><td>${m.material}</td><td>${m.qty}</td><td>${m.stage}</td><td>${m.by}</td><td>${m.date}</td><td>${statusBadge(m.status)}</td>
+          ${currentRole==='pm' && m.status==='Pending'?`<td><button class="btn btn-sm btn-success" onclick="showApproval('Approve Material','Material: ${m.material}<br>Qty: ${m.qty}<br>Stage: ${m.stage}')">Approve</button></td>`:(currentRole==='pm'?'<td>-</td>':'')}
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- VENDORS PAGE ----------
+PAGE_RENDERERS['vendors'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Vendors & Contractors</h3><button class="btn btn-sm btn-primary">+ Add Vendor</button></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>Name</th><th>Type</th><th>Phone</th><th>Rating</th><th>Status</th><th>Performance</th></tr>
+        ${VENDORS.map(v=>`<tr>
+          <td><b>${v.name}</b></td><td><span class="badge-pill badge-blue">${v.type}</span></td><td>${v.phone}</td>
+          <td><span style="color:${v.rating>=4?'var(--success)':'var(--warning)'}">★</span> ${v.rating}/5</td>
+          <td>${statusBadge(v.status)}</td>
+          <td><div class="progress" style="width:80px"><div class="progress-fill" style="width:${v.rating*20}%;background:${v.rating>=4?'var(--success)':'var(--warning)'}"></div></div></td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Vendor Performance Metrics</h3></div>
+      <div class="panel-body">
+        <table>
+          <tr><th>Vendor</th><th>Delay Ratio</th><th>Rework %</th><th>Budget Adherence</th><th>Quality</th></tr>
+          <tr><td>MK Construction Co.</td><td style="color:var(--warning)">12%</td><td>5%</td><td>96%</td><td>3.8/5</td></tr>
+          <tr><td>Gupta Electricals</td><td style="color:var(--success)">3%</td><td>2%</td><td>99%</td><td>4.0/5</td></tr>
+          <tr><td>Sharma Plumbing</td><td style="color:var(--danger)">18%</td><td>8%</td><td>92%</td><td>3.5/5</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Contract Values</h3></div>
+      <div class="panel-body">
+        <table>
+          <tr><th>Vendor</th><th>Scope</th><th>Contract Value</th><th>Paid</th><th>Balance</th></tr>
+          <tr><td>MK Construction</td><td>Structure + Brickwork</td><td>${fmt(2800000)}</td><td>${fmt(800000)}</td><td>${fmt(2000000)}</td></tr>
+          <tr><td>Gupta Electricals</td><td>Full Electrical</td><td>${fmt(650000)}</td><td>${fmt(0)}</td><td>${fmt(650000)}</td></tr>
+          <tr><td>Sharma Plumbing</td><td>Full Plumbing</td><td>${fmt(420000)}</td><td>${fmt(0)}</td><td>${fmt(420000)}</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- QUALITY PAGE ----------
+PAGE_RENDERERS['quality'] = () => `
+  <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><div class="card-header"><h3>Inspections</h3></div><div class="big-num">${INSPECTIONS.length}</div></div>
+    <div class="card"><div class="card-header"><h3>Open Defects</h3></div><div class="big-num" style="color:var(--danger)">${DEFECTS.filter(d=>d.status!=='Closed').length}</div></div>
+    <div class="card"><div class="card-header"><h3>Pass Rate</h3></div><div class="big-num" style="color:var(--success)">50%</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Inspections</h3><button class="btn btn-sm btn-primary">Schedule New</button></div>
+      <div class="panel-body table-wrap">
+        <table>
+          <tr><th>ID</th><th>Stage</th><th>Date</th><th>Inspector</th><th>Status</th><th>Defects</th></tr>
+          ${INSPECTIONS.map(i=>`<tr>
+            <td>${i.id}</td><td>${i.stage}</td><td>${i.date}</td><td>${i.by}</td><td>${statusBadge(i.status)}</td><td>${i.defects}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Open Defects</h3></div>
+      <div class="panel-body table-wrap">
+        <table>
+          <tr><th>ID</th><th>Description</th><th>Severity</th><th>Status</th><th>Assigned To</th></tr>
+          ${DEFECTS.map(d=>`<tr>
+            <td>${d.id}</td><td>${d.desc}</td><td><span class="badge-pill badge-${d.severity==='High'?'red':'yellow'}">${d.severity}</span></td>
+            <td>${statusBadge(d.status)}</td><td>${d.assigned}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Quality Checklist - Structure Stage</h3></div>
+    <div class="panel-body">
+      ${['Column alignment within tolerance (±5mm)','Rebar spacing as per drawing','Concrete cube test results ≥ 25 MPa','Formwork bracing adequate','Cover blocks placed correctly','Slab thickness verified','Beam dimensions verified','Waterproofing at junctions'].map((item,i)=>`
+        <div class="checklist-item">
+          <input type="checkbox" ${i<4?'checked':''} id="chk${i}">
+          <label for="chk${i}">${item}</label>
+          ${i<3?'<span class="mandatory">MANDATORY</span>':''}
+        </div>
+      `).join('')}
+    </div>
+  </div>
+`;
+
+// ---------- PAYMENTS PAGE ----------
+PAGE_RENDERERS['payments'] = () => `
+  <div class="cards">
+    <div class="card"><div class="card-header"><h3>Total Paid</h3><div class="stat-icon green">&#8377;</div></div><div class="big-num">${fmt(675000)}</div></div>
+    <div class="card"><div class="card-header"><h3>Under Review</h3><div class="stat-icon yellow">&#8377;</div></div><div class="big-num">${fmt(350000)}</div></div>
+    <div class="card"><div class="card-header"><h3>Pending</h3><div class="stat-icon red">&#8377;</div></div><div class="big-num">${fmt(80000)}</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Payment Requests</h3></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>ID</th><th>Vendor</th><th>Stage</th><th>Amount</th><th>Status</th><th>Date</th>${currentRole!=='contractor'?'<th>Action</th>':''}</tr>
+        ${PAYMENTS.map(p=>`<tr>
+          <td><b>${p.id}</b></td><td>${p.vendor}</td><td>${p.stage}</td><td>${fmt(p.amount)}</td>
+          <td>${statusBadge(p.status)}</td><td>${p.date}</td>
+          ${currentRole!=='contractor'&& p.status!=='Paid'?`<td><button class="btn btn-sm btn-outline" onclick="showApproval('Payment Details','Vendor: ${p.vendor}<br>Stage: ${p.stage}<br>Amount: ₹${p.amount.toLocaleString()}<br>Status: ${p.status}')">Review</button></td>`:(currentRole!=='contractor'?'<td>-</td>':'')}
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- TASKS PAGE ----------
+PAGE_RENDERERS['tasks'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Structure Stage - Tasks</h3><button class="btn btn-sm btn-primary">+ Add Task</button></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>Task</th><th>Assigned To</th><th>Planned Qty</th><th>Unit</th><th>Completion</th><th>Status</th></tr>
+        ${[
+          {task:'Column Casting - Ground Floor',who:'MK Construction',qty:12,unit:'nos',comp:100,st:'completed'},
+          {task:'Column Casting - 1st Floor',who:'MK Construction',qty:12,unit:'nos',comp:100,st:'completed'},
+          {task:'Column Casting - 2nd Floor',who:'MK Construction',qty:12,unit:'nos',comp:33,st:'in-progress'},
+          {task:'Beam Formwork - 1st Floor',who:'MK Construction',qty:8,unit:'nos',comp:75,st:'in-progress'},
+          {task:'Slab Reinforcement - 1st Floor',who:'MK Construction',qty:1,unit:'lot',comp:70,st:'in-progress'},
+          {task:'Slab Casting - 1st Floor',who:'MK Construction',qty:1,unit:'lot',comp:0,st:'pending'},
+          {task:'Staircase Structure',who:'MK Construction',qty:1,unit:'lot',comp:0,st:'pending'}
+        ].map(t=>`<tr>
+          <td>${t.task}</td><td>${t.who}</td><td>${t.qty}</td><td>${t.unit}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="progress" style="width:80px"><div class="progress-fill" style="width:${t.comp}%;background:${t.comp===100?'var(--success)':'var(--primary)'}"></div></div>${t.comp}%</div></td>
+          <td>${statusBadge(t.st)}</td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- REPORTS PAGE ----------
+PAGE_RENDERERS['reports'] = () => `
+  <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+    ${['Stage Completion Report','Budget Deviation Report','Vendor Performance Report','Material Wastage Report','Cash Flow Projection','Delay Impact Report'].map(r=>`
+      <div class="card" style="cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:8px">&#128202;</div>
+        <h3 style="font-size:.95rem;margin-bottom:4px">${r}</h3>
+        <span style="font-size:.8rem;color:var(--gray-500)">Last generated: Feb 18, 2026</span>
+        <div style="margin-top:12px">
+          <button class="btn btn-sm btn-outline">PDF</button>
+          <button class="btn btn-sm btn-outline" style="margin-left:6px">Excel</button>
+        </div>
+      </div>
+    `).join('')}
+  </div>
+`;
+
+// ---------- DOCUMENTS PAGE ----------
+PAGE_RENDERERS['documents'] = () => `
+  <div class="tabs" id="docTabs">
+    <div class="tab active" onclick="switchTab('docTabs','docDrawings')">Drawings</div>
+    <div class="tab" onclick="switchTab('docTabs','docPermits')">Permits</div>
+    <div class="tab" onclick="switchTab('docTabs','docContracts')">Contracts</div>
+  </div>
+  <div class="tab-content active" id="docDrawings">
+    <div class="panel"><div class="panel-body table-wrap"><table>
+      <tr><th>Document</th><th>Version</th><th>Uploaded By</th><th>Date</th><th>Status</th></tr>
+      <tr><td>Ground Floor Plan</td><td>v3</td><td>Arch. Suresh</td><td>2025-10-15</td><td>${statusBadge('Approved')}</td></tr>
+      <tr><td>1st Floor Plan</td><td>v2</td><td>Arch. Suresh</td><td>2025-11-20</td><td>${statusBadge('Approved')}</td></tr>
+      <tr><td>2nd Floor Plan</td><td>v3</td><td>Arch. Suresh</td><td>2026-02-18</td><td>${statusBadge('Pending')}</td></tr>
+      <tr><td>Structural Drawing</td><td>v2</td><td>Str. Eng. Ravi</td><td>2025-10-20</td><td>${statusBadge('Approved')}</td></tr>
+      <tr><td>Electrical Layout</td><td>v1</td><td>Gupta Electricals</td><td>2026-01-10</td><td>${statusBadge('Draft')}</td></tr>
+    </table></div></div>
+  </div>
+  <div class="tab-content" id="docPermits">
+    <div class="panel"><div class="panel-body table-wrap"><table>
+      <tr><th>Permit</th><th>Issued By</th><th>Date</th><th>Valid Till</th><th>Status</th></tr>
+      <tr><td>Building Plan Approval</td><td>BBMP</td><td>2025-10-15</td><td>2027-10-15</td><td>${statusBadge('Approved')}</td></tr>
+      <tr><td>Commencement Certificate</td><td>BBMP</td><td>2025-10-20</td><td>-</td><td>${statusBadge('Approved')}</td></tr>
+    </table></div></div>
+  </div>
+  <div class="tab-content" id="docContracts">
+    <div class="panel"><div class="panel-body table-wrap"><table>
+      <tr><th>Contract</th><th>Vendor</th><th>Value</th><th>Date</th><th>Status</th></tr>
+      <tr><td>Civil Works Contract</td><td>MK Construction Co.</td><td>${fmt(2800000)}</td><td>2025-10-01</td><td>${statusBadge('Active')}</td></tr>
+      <tr><td>Electrical Contract</td><td>Gupta Electricals</td><td>${fmt(650000)}</td><td>2025-12-01</td><td>${statusBadge('Active')}</td></tr>
+      <tr><td>Plumbing Contract</td><td>Sharma Plumbing</td><td>${fmt(420000)}</td><td>2025-12-01</td><td>${statusBadge('Active')}</td></tr>
+    </table></div></div>
+  </div>
+`;
+
+// ---------- SITE ENGINEER DASHBOARD ----------
+PAGE_RENDERERS['engineer_dashboard'] = () => `
+  <div class="alert alert-info" style="font-size:.9rem">&#128197; <b>Today: Feb 20, 2026</b> &nbsp;|&nbsp; &#9728; Sunny, 32°C &nbsp;|&nbsp; Stage: <b>Structure</b> (65%)</div>
+  <div class="cards">
+    <div class="card"><div class="card-header"><h3>My Tasks Today</h3></div><div class="big-num">3</div><div class="change">2 in progress, 1 pending</div></div>
+    <div class="card"><div class="card-header"><h3>Labor on Site</h3></div><div class="big-num">18</div><div class="change">Masons: 8, Helpers: 6, Bar benders: 4</div></div>
+    <div class="card"><div class="card-header"><h3>Material Requests</h3></div><div class="big-num" style="color:var(--warning)">2</div><div class="change">Pending approval</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Today's Tasks</h3></div>
+    <div class="panel-body">
+      ${[{task:'Column casting 2nd floor',comp:33,st:'in-progress'},{task:'Beam formwork 1st floor',comp:75,st:'in-progress'},{task:'Slab reinforcement 1st floor',comp:70,st:'in-progress'}].map(t=>`
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--gray-100)">
+          <div style="flex:1"><b>${t.task}</b></div>
+          <div style="display:flex;align-items:center;gap:8px;width:200px"><div class="progress" style="flex:1"><div class="progress-fill" style="width:${t.comp}%;background:var(--primary)"></div></div>${t.comp}%</div>
+          ${statusBadge(t.st)}
+          <button class="btn btn-sm btn-primary">Update</button>
+        </div>
+      `).join('')}
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Quick Daily Log</h3></div>
+      <div class="panel-body">
+        <div class="form-group"><label>Weather</label><select><option>Sunny</option><option>Cloudy</option><option>Rainy</option><option>Partly Cloudy</option></select></div>
+        <div class="form-group"><label>Work Description</label><textarea style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:8px;min-height:80px;font-family:inherit">Column casting 2nd floor - 4 columns completed. Formwork for beam B3-B6.</textarea></div>
+        <div class="form-group"><label>Issues</label><input type="text" value="Minor delay in rebar delivery"></div>
+        <button class="btn btn-primary" style="width:auto">Submit Log</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Upload Photos</h3></div>
+      <div class="panel-body">
+        <div style="border:2px dashed var(--gray-300);border-radius:10px;padding:40px;text-align:center;color:var(--gray-500)">
+          <div style="font-size:2rem;margin-bottom:8px">&#128247;</div>
+          <p>Tap to upload site photos</p>
+          <p style="font-size:.8rem;margin-top:4px">Photos will be geo-tagged automatically</p>
+          <button class="btn btn-sm btn-primary" style="margin-top:12px">Choose Files</button>
+        </div>
+        <div class="photo-grid" style="margin-top:16px">
+          ${['Column C3 casting','Rebar layout 2F'].map(t=>`<div class="photo-card" style="background:linear-gradient(135deg,#cbd5e1,#94a3b8)"><span style="font-size:.75rem">&#128247; ${t}</span><div class="photo-date">Just now</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- LABOR PAGE ----------
+PAGE_RENDERERS['labor'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Today's Labor Attendance</h3><button class="btn btn-sm btn-primary">+ Add Entry</button></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>Trade Type</th><th>Count</th><th>Hours Worked</th><th>Wage Rate (₹/day)</th><th>Total Cost</th></tr>
+        ${[{trade:'Mason',count:8,hrs:8,rate:900},{trade:'Helper',count:6,hrs:8,rate:500},{trade:'Bar Bender',count:4,hrs:8,rate:800},{trade:'Carpenter',count:2,hrs:6,rate:850}].map(l=>`
+          <tr><td>${l.trade}</td><td>${l.count}</td><td>${l.hrs}</td><td>${fmt(l.rate)}</td><td>${fmt(l.count*l.rate)}</td></tr>
+        `).join('')}
+        <tr style="font-weight:700;background:var(--gray-50)"><td>Total</td><td>20</td><td>-</td><td>-</td><td>${fmt(18100)}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Weekly Labor Trend</h3></div>
+    <div class="panel-body">
+      <div class="chart-bar" style="height:160px">
+        ${[{d:'Mon',v:22},{d:'Tue',v:20},{d:'Wed',v:18},{d:'Thu',v:21},{d:'Fri',v:18},{d:'Sat',v:12}].map(x=>`
+          <div class="bar-col"><div class="bar-val">${x.v}</div><div class="bar" style="height:${x.v/22*140}px;background:var(--primary)"></div><div class="bar-label">${x.d}</div></div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- UPLOAD PAGE ----------
+PAGE_RENDERERS['upload'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Upload Site Photos & Documents</h3></div>
+    <div class="panel-body">
+      <div style="border:2px dashed var(--gray-300);border-radius:10px;padding:50px;text-align:center;color:var(--gray-500);margin-bottom:20px">
+        <div style="font-size:3rem;margin-bottom:12px">&#128247;</div>
+        <p style="font-size:1.1rem">Drag & drop files or tap to browse</p>
+        <p style="font-size:.85rem;margin-top:8px;color:var(--gray-400)">Supports JPG, PNG, PDF up to 25MB</p>
+        <button class="btn btn-primary" style="margin-top:16px;width:auto">Select Files</button>
+      </div>
+      <div class="form-group"><label>Stage</label><select>${STAGES.map(s=>`<option ${s.status==='in-progress'?'selected':''}>${s.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Description</label><input type="text" placeholder="e.g., Column casting progress"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Recent Uploads</h3></div>
+    <div class="panel-body">
+      <div class="photo-grid">
+        ${['Column casting 2F','Slab rebar 1F','Beam formwork','Plumbing sleeves','Foundation curing','Steel delivery'].map((t,i)=>`
+          <div class="photo-card" style="background:linear-gradient(135deg,${i%2?'#bfdbfe':'#cbd5e1'},${i%2?'#60a5fa':'#94a3b8'})">
+            <span style="font-size:.75rem">&#128247; ${t}</span>
+            <div class="photo-date">Feb ${20-i}, 2026</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- CONTRACTOR DASHBOARD ----------
+PAGE_RENDERERS['contractor_dashboard'] = () => `
+  <div class="alert alert-info">&#128119; Welcome, MK Construction Co. You have <b>2 active stages</b> assigned.</div>
+  <div class="cards">
+    <div class="card"><div class="card-header"><h3>Active Stages</h3></div><div class="big-num">1</div><div class="change">Structure - 65%</div></div>
+    <div class="card"><div class="card-header"><h3>Contract Value</h3></div><div class="big-num">${fmt(2800000)}</div></div>
+    <div class="card"><div class="card-header"><h3>Amount Paid</h3></div><div class="big-num" style="color:var(--success)">${fmt(800000)}</div></div>
+    <div class="card"><div class="card-header"><h3>Pending Claims</h3></div><div class="big-num" style="color:var(--warning)">${fmt(350000)}</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>My Assigned Stages</h3></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>Stage</th><th>Scope</th><th>Status</th><th>Completion</th><th>Contract Value</th></tr>
+        <tr><td><b>Structure</b></td><td>Full civil structure</td><td>${statusBadge('in-progress')}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="progress" style="width:80px"><div class="progress-fill" style="width:65%;background:var(--primary)"></div></div>65%</div></td>
+          <td>${fmt(2200000)}</td></tr>
+        <tr><td><b>Brickwork</b></td><td>All brickwork</td><td>${statusBadge('pending')}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="progress" style="width:80px"><div class="progress-fill" style="width:0%"></div></div>0%</div></td>
+          <td>${fmt(600000)}</td></tr>
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- CONTRACTOR PROGRESS ----------
+PAGE_RENDERERS['progress'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Submit Work Progress</h3></div>
+    <div class="panel-body">
+      <div class="form-group"><label>Stage</label><select><option>Structure</option><option>Brickwork</option></select></div>
+      <div class="form-group"><label>Work Description</label><textarea style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:8px;min-height:80px;font-family:inherit" placeholder="Describe work completed..."></textarea></div>
+      <div class="form-group"><label>Completion %</label><input type="number" value="65" min="0" max="100"></div>
+      <div class="form-group"><label>Upload Proof (Photos)</label>
+        <div style="border:2px dashed var(--gray-300);border-radius:8px;padding:20px;text-align:center;color:var(--gray-400)">
+          &#128247; Tap to upload photos<br><button class="btn btn-sm btn-outline" style="margin-top:8px">Browse Files</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:auto">Submit Progress</button>
+    </div>
+  </div>
+`;
+
+// ---------- PROCUREMENT DASHBOARD ----------
+PAGE_RENDERERS['procurement_dashboard'] = () => `
+  <div class="cards">
+    <div class="card"><div class="card-header"><h3>Pending Requests</h3><div class="stat-icon yellow">&#128230;</div></div><div class="big-num">${MATERIAL_REQUESTS.filter(m=>m.status==='Pending').length}</div></div>
+    <div class="card"><div class="card-header"><h3>Active POs</h3><div class="stat-icon blue">&#128220;</div></div><div class="big-num">3</div></div>
+    <div class="card"><div class="card-header"><h3>Low Stock Alerts</h3><div class="stat-icon red">&#9888;</div></div><div class="big-num" style="color:var(--danger)">2</div></div>
+    <div class="card"><div class="card-header"><h3>Avg Wastage</h3><div class="stat-icon cyan">&#128202;</div></div><div class="big-num">2.6%</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Pending Material Requests</h3></div>
+      <div class="panel-body table-wrap">
+        <table>
+          <tr><th>ID</th><th>Material</th><th>Qty</th><th>Status</th><th>Action</th></tr>
+          ${MATERIAL_REQUESTS.filter(m=>['Pending','Approved'].includes(m.status)).map(m=>`<tr>
+            <td>${m.id}</td><td>${m.material}</td><td>${m.qty}</td><td>${statusBadge(m.status)}</td>
+            <td>${m.status==='Approved'?'<button class="btn btn-sm btn-primary">Create PO</button>':'<span style="color:var(--gray-400)">Awaiting PM</span>'}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Low Stock Alerts</h3></div>
+      <div class="panel-body">
+        <div class="alert alert-danger">&#9888; <b>River Sand</b> - Only 7 units remaining (below threshold of 10)</div>
+        <div class="alert alert-warning">&#9888; <b>OPC Cement</b> - 90 bags remaining (usage rate: ~20 bags/day)</div>
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- PURCHASE ORDERS ----------
+PAGE_RENDERERS['po'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Purchase Orders</h3><button class="btn btn-sm btn-primary">+ Create PO</button></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>PO Number</th><th>Vendor</th><th>Material</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+        <tr><td><b>PO-2026-001</b></td><td>Raj Steel Traders</td><td>TMT Steel 12mm</td><td>${fmt(225000)}</td><td>${statusBadge('Delivered')}</td><td>2026-01-10</td></tr>
+        <tr><td><b>PO-2026-002</b></td><td>Ambuja Cement Dealers</td><td>OPC Cement 53 Grade</td><td>${fmt(72000)}</td><td>${statusBadge('Delivered')}</td><td>2026-02-08</td></tr>
+        <tr><td><b>PO-2026-003</b></td><td>Raj Steel Traders</td><td>TMT Steel 16mm</td><td>${fmt(180000)}</td><td>${statusBadge('Ordered')}</td><td>2026-02-15</td></tr>
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- INVENTORY ----------
+PAGE_RENDERERS['inventory'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Inventory Status</h3></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>Material</th><th>Unit</th><th>Total Inward</th><th>Consumed</th><th>Stock</th><th>Wastage %</th><th>Status</th></tr>
+        ${INVENTORY.map(i=>{
+          const isLow = i.material.includes('Sand') || i.material.includes('Cement');
+          const wastNum = parseFloat(i.wastage);
+          return `<tr>
+          <td><b>${i.material}</b></td><td>${i.unit}</td><td>${i.inward.toLocaleString()}</td><td>${i.consumed.toLocaleString()}</td><td>${i.stock.toLocaleString()}</td>
+          <td style="color:${wastNum>3?'var(--danger)':wastNum>2?'var(--warning)':'var(--success)'}">${i.wastage}</td>
+          <td>${isLow?'<span class="badge-pill badge-red">Low Stock</span>':'<span class="badge-pill badge-green">OK</span>'}</td>
+        </tr>`;}).join('')}
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Consumption vs Theoretical Requirement</h3></div>
+    <div class="panel-body">
+      <div class="chart-bar" style="height:180px">
+        ${INVENTORY.map(i=>{const th=i.consumed*0.95;const ac=i.consumed;const maxV=Math.max(th,ac);return `
+          <div class="bar-col">
+            <div class="bar-val">${parseFloat(i.wastage).toFixed(1)}%</div>
+            <div style="display:flex;gap:3px;align-items:flex-end;height:150px">
+              <div class="bar" style="height:${th/maxV*140}px;background:var(--gray-300);flex:1"></div>
+              <div class="bar" style="height:${ac/maxV*140}px;background:${parseFloat(i.wastage)>3?'var(--danger)':'var(--primary)'};flex:1"></div>
+            </div>
+            <div class="bar-label">${i.material.split(' ')[0]}</div>
+          </div>`;}).join('')}
+      </div>
+      <div style="display:flex;gap:20px;justify-content:center;margin-top:10px;font-size:.8rem;color:var(--gray-500)">
+        <span>&#9632; Theoretical</span><span style="color:var(--primary)">&#9632; Actual</span><span style="color:var(--danger)">&#9632; High Wastage</span>
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- ACCOUNTS DASHBOARD ----------
+PAGE_RENDERERS['accounts_dashboard'] = () => `
+  <div class="cards">
+    <div class="card"><div class="card-header"><h3>Total Budget</h3><div class="stat-icon blue">&#8377;</div></div><div class="big-num">${fmt(PROJECT.totalBudget)}</div></div>
+    <div class="card"><div class="card-header"><h3>Total Disbursed</h3><div class="stat-icon green">&#8377;</div></div><div class="big-num">${fmt(2957000)}</div></div>
+    <div class="card"><div class="card-header"><h3>Pending Payments</h3><div class="stat-icon yellow">&#8377;</div></div><div class="big-num">${fmt(430000)}</div></div>
+    <div class="card"><div class="card-header"><h3>Expenses This Month</h3><div class="stat-icon red">&#8377;</div></div><div class="big-num">${fmt(396000)}</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Pending Payment Approvals</h3></div>
+      <div class="panel-body table-wrap">
+        <table>
+          <tr><th>Vendor</th><th>Stage</th><th>Amount</th><th>Inspection</th><th>Action</th></tr>
+          ${PAYMENTS.filter(p=>['Under Review','Approved'].includes(p.status)).map(p=>`<tr>
+            <td>${p.vendor}</td><td>${p.stage}</td><td>${fmt(p.amount)}</td>
+            <td>${p.stage==='Structure'?statusBadge('Conditional'):statusBadge('Passed')}</td>
+            <td><button class="btn btn-sm btn-success" onclick="showApproval('Release Payment','Vendor: ${p.vendor}<br>Amount: ₹${p.amount.toLocaleString()}<br>Stage: ${p.stage}')">Release</button></td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Expense Breakdown (Current Month)</h3></div>
+      <div class="panel-body">
+        ${[{cat:'Material',amt:297000,pct:75},{cat:'Labor',amt:63000,pct:16},{cat:'Equipment',amt:36000,pct:9}].map(e=>`
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:90px;font-size:.88rem">${e.cat}</div>
+            <div class="progress" style="flex:1"><div class="progress-fill" style="width:${e.pct}%;background:var(--primary)"></div></div>
+            <div style="width:100px;text-align:right;font-weight:600;font-size:.88rem">${fmt(e.amt)}</div>
+            <div style="width:40px;font-size:.78rem;color:var(--gray-500)">${e.pct}%</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+`;
+
+// ---------- EXPENSES PAGE ----------
+PAGE_RENDERERS['expenses'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>All Expenses</h3><button class="btn btn-sm btn-primary">+ Add Expense</button></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Stage</th><th>Status</th></tr>
+        ${EXPENSES.map(e=>`<tr>
+          <td>${e.date}</td><td><span class="badge-pill badge-blue">${e.category}</span></td>
+          <td>${e.desc}</td><td>${fmt(e.amount)}</td><td>${e.stage}</td><td>${statusBadge(e.status)}</td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- CASH FLOW ----------
+PAGE_RENDERERS['cashflow'] = () => `
+  <div class="panel">
+    <div class="panel-head"><h3>Cash Flow Projection</h3></div>
+    <div class="panel-body">
+      <div class="chart-bar" style="height:220px">
+        ${[{m:'Sep',i:500,o:385},{m:'Oct',i:800,o:542},{m:'Nov',i:600,o:620},{m:'Dec',i:1200,o:1180},{m:'Jan',i:900,o:750},{m:'Feb',i:800,o:463},{m:'Mar',i:1000,o:0},{m:'Apr',i:700,o:0}].map(x=>{
+          const max=1200;return `<div class="bar-col"><div class="bar-val">${x.o||'-'}</div>
+            <div style="display:flex;gap:3px;align-items:flex-end;height:180px">
+              <div class="bar" style="height:${x.i/max*160}px;background:#93c5fd;flex:1"></div>
+              <div class="bar" style="height:${x.o/max*160}px;background:${x.o>x.i?'var(--danger)':'var(--primary)'};flex:1"></div>
+            </div><div class="bar-label">${x.m}</div></div>`;}).join('')}
+      </div>
+      <div style="display:flex;gap:20px;justify-content:center;margin-top:10px;font-size:.8rem;color:var(--gray-500)">
+        <span style="color:#93c5fd">&#9632; Inflow (₹K)</span><span style="color:var(--primary)">&#9632; Outflow (₹K)</span>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Stage-wise Payment Schedule</h3></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>Stage</th><th>Allocated</th><th>Released</th><th>Remaining</th><th>Status</th></tr>
+        ${STAGES.map(s=>{const rel=s.status==='completed'?s.spent:s.status==='in-progress'?Math.round(s.spent*0.6):0;return `<tr>
+          <td>${s.name}</td><td>${fmt(s.budget)}</td><td>${fmt(rel)}</td><td>${fmt(s.budget-rel)}</td>
+          <td>${s.status==='completed'?statusBadge('Closed'):s.status==='in-progress'?statusBadge('Active'):statusBadge('Upcoming')}</td>
+        </tr>`}).join('')}
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- STAGE DETAIL PAGE ----------
+PAGE_RENDERERS['stageDetail'] = () => {
+  const sd = STAGE_DETAILS[selectedStageId];
+  const stage = STAGES[selectedStageId - 1];
+  if (!sd || !stage) return '<div class="alert alert-danger">Stage not found.</div>';
+  const totalChecks = sd.substages.reduce((a,s)=>a+s.checklist.length,0);
+  const doneChecks = sd.substages.reduce((a,s)=>a+s.checklist.filter(c=>c.checked).length,0);
+  const mandatoryTotal = sd.substages.reduce((a,s)=>a+s.checklist.filter(c=>c.mandatory).length,0);
+  const mandatoryDone = sd.substages.reduce((a,s)=>a+s.checklist.filter(c=>c.mandatory&&c.checked).length,0);
+  return `
+    <div class="stage-detail-header">
+      <button class="back-btn" onclick="navigateTo('stages')" title="Back to Stages">&#8592;</button>
+      <div class="sdh-info">
+        <h2>Stage ${selectedStageId}: ${sd.name}</h2>
+        <span>${sd.description}</span>
+      </div>
+      <div class="sdh-stats">
+        <div class="sdh-stat"><div class="val" style="color:${stage.completion===100?'var(--success)':'var(--primary)'}">${stage.completion}%</div><div class="lbl">Complete</div></div>
+        <div class="sdh-stat"><div class="val">${sd.substages.length}</div><div class="lbl">Sub-stages</div></div>
+      </div>
+    </div>
+    <div class="substage-summary">
+      <div class="ss-summary-card"><div class="ss-val" style="color:var(--primary)">${sd.substages.length}</div><div class="ss-lbl">Total Sub-stages</div></div>
+      <div class="ss-summary-card"><div class="ss-val" style="color:var(--success)">${sd.substages.filter(s=>s.status==='completed').length}</div><div class="ss-lbl">Completed</div></div>
+      <div class="ss-summary-card"><div class="ss-val" style="color:var(--info)">${sd.substages.filter(s=>s.status==='in-progress').length}</div><div class="ss-lbl">In Progress</div></div>
+      <div class="ss-summary-card"><div class="ss-val">${totalChecks}</div><div class="ss-lbl">Total Checks</div></div>
+      <div class="ss-summary-card"><div class="ss-val" style="color:var(--success)">${doneChecks}/${totalChecks}</div><div class="ss-lbl">Checks Done</div></div>
+      <div class="ss-summary-card"><div class="ss-val" style="color:${mandatoryDone===mandatoryTotal?'var(--success)':'var(--danger)'}">${mandatoryDone}/${mandatoryTotal}</div><div class="ss-lbl">Mandatory Done</div></div>
+    </div>
+    ${stage.completion<100 && mandatoryDone<mandatoryTotal ? '<div class="alert alert-warning">&#9888; Stage cannot be closed until all <b>mandatory checklist items</b> are verified and passed. '+mandatoryTotal+' mandatory checks required, '+mandatoryDone+' completed so far.</div>' : ''}
+    ${stage.completion===100 ? '<div class="alert alert-success">&#10003; All sub-stages completed and mandatory checklists verified. Stage ready for closure/inspection.</div>' : ''}
+
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-head"><h3>Stage Execution State Machine</h3><span style="font-size:.8rem;color:var(--gray-500)">Current state highlighted</span></div>
+      <div class="panel-body">
+        <div class="sm-flow">
+          ${STATE_MACHINES.stage.states.map((s,i)=>{
+            const curState = stage.status==='completed'?'Completed':stage.status==='in-progress'?'In Progress':'Not Started';
+            const ci = STATE_MACHINES.stage.states.indexOf(curState);
+            const cls = s===curState?'active-state highlight':i<ci?'completed-state':s==='Locked'?'locked-state':'draft';
+            return `<div class="sm-node ${cls}">${s}</div>${i<STATE_MACHINES.stage.states.length-1?'<span class="sm-arrow'+(i<ci?' active-arrow':'')+'">&#8594;</span>':''}`;
+          }).join('')}
+        </div>
+        <div class="transition-actions" style="margin-top:14px">
+          ${stage.status==='in-progress'?`
+            <button class="btn-transition advance" ${stage.completion<95?'disabled title="Tasks must be ≥ 95% complete"':''} onclick="showApproval('Request Inspection','Stage: ${stage.name}<br>Completion: ${stage.completion}%<br>Mandatory checks: ${mandatoryDone}/${mandatoryTotal}<br><br>Guard: Tasks ≥ 95% and mandatory checklist ready')">&#10003; Request Inspection</button>
+          `:''}
+          ${stage.status==='completed'?`
+            <button class="btn-transition advance" onclick="showApproval('Release Payment','Stage: ${stage.name}<br>Status: Completed<br>Inspection: Passed<br><br>Guard: Accounts confirmation required')">&#128179; Trigger Payment</button>
+            <span class="guard-badge met">Inspection Passed</span>
+          `:''}
+          ${stage.status==='in-progress'?`
+            <span class="guard-badge ${stage.completion>=95?'met':'unmet'}">Tasks ≥ 95% (currently ${stage.completion}%)</span>
+            <span class="guard-badge ${mandatoryDone===mandatoryTotal?'met':'unmet'}">Mandatory checks ${mandatoryDone}/${mandatoryTotal}</span>
+          `:''}
+        </div>
+        <div style="margin-top:10px;font-size:.78rem;color:var(--gray-500)">
+          ${STATE_MACHINES.stage.rules.map(r=>`<span class="guard-badge unmet" style="margin:2px">&#9888; ${r}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    ${SP62_CHAPTERS[selectedStageId] && SP62_CHAPTERS[selectedStageId].chapters.length > 0 ? `
+    <div class="sp62-panel">
+      <h4>SP 62:1997 - Handbook on Building Construction Practices (BIS)</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+        ${SP62_CHAPTERS[selectedStageId].chapters.map(ch=>`<span class="sp62-chapter"><span class="ch-num">Ch.${ch.num}</span>${ch.title}</span>`).join('')}
+      </div>
+      ${SP62_CHAPTERS[selectedStageId].chapters.map(ch=>`
+        <div class="sp62-note"><b>Ch.${ch.num} - ${ch.title}:</b> ${ch.note}</div>
+      `).join('')}
+    </div>` : ''}
+
+    <div class="panel">
+      <div class="panel-head"><h3>Sub-stages & Checklists</h3><span style="font-size:.8rem;color:var(--gray-500)">Click sub-stage to expand checklist</span></div>
+      <div class="panel-body substage-list">
+        ${sd.substages.map((ss,idx) => {
+          const ssDone = ss.checklist.filter(c=>c.checked).length;
+          const ssTotal = ss.checklist.length;
+          const ssMandDone = ss.checklist.filter(c=>c.mandatory&&c.checked).length;
+          const ssMandTotal = ss.checklist.filter(c=>c.mandatory).length;
+          return `
+          <div class="substage">
+            <div class="substage-header" onclick="toggleSubstage(${idx})">
+              <span class="ss-arrow" id="ssArrow${idx}">&#9654;</span>
+              <span class="ss-name">${idx+1}. ${ss.name}</span>
+              ${statusBadge(ss.status)}
+              <span class="ss-pct">${ss.completion}%</span>
+            </div>
+            <div class="substage-body" id="ssBody${idx}">
+              <div class="substage-progress">
+                <span style="font-size:.82rem;color:var(--gray-600);min-width:80px">Progress:</span>
+                <div class="progress"><div class="progress-fill" style="width:${ss.completion}%;background:${ss.completion===100?'var(--success)':'var(--primary)'}"></div></div>
+                <span style="font-size:.82rem;font-weight:600">${ss.completion}%</span>
+              </div>
+              <div style="display:flex;gap:16px;margin-bottom:14px;font-size:.8rem">
+                <span style="color:var(--gray-600)">Checklist: <b>${ssDone}/${ssTotal}</b> done</span>
+                <span style="color:${ssMandDone===ssMandTotal?'var(--success)':'var(--danger)'}">Mandatory: <b>${ssMandDone}/${ssMandTotal}</b></span>
+              </div>
+              <table class="cl-table">
+                <thead><tr>
+                  <th class="cl-check">#</th>
+                  <th class="cl-mand" title="Mandatory">REQ</th>
+                  <th>Checklist Item</th>
+                  <th>Standard / Reference</th>
+                  <th class="cl-check">Done</th>
+                </tr></thead>
+                <tbody>
+                  ${ss.checklist.map((cl,ci) => `
+                    <tr>
+                      <td class="cl-check" style="font-size:.78rem;color:var(--gray-400)">${ci+1}</td>
+                      <td class="cl-mand">${cl.mandatory?'<span class="cl-mandatory" title="Mandatory"></span>':'<span class="cl-optional" title="Optional"></span>'}</td>
+                      <td class="cl-item">${cl.item}</td>
+                      <td><span class="std-ref">${cl.std}</span></td>
+                      <td class="cl-check"><input type="checkbox" ${cl.checked?'checked':''} onclick="toggleCheck(${selectedStageId},${idx},${ci})"></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+};
+
+// ---------- WORKFLOW STATE MACHINES PAGE ----------
+PAGE_RENDERERS['workflows'] = () => {
+  function renderSmFlow(sm) {
+    const nodeClass = (s) => {
+      if(s===sm.current) return 'active-state';
+      const ci = sm.states.indexOf(sm.current);
+      const si = sm.states.indexOf(s);
+      if(s==='Locked'||s==='Archived'||s==='Closed') return si<=ci?'locked-state':'draft';
+      if(s==='Rejected'||s==='Cancelled'||s==='Failed') return 'blocked-state';
+      if(si<ci) return 'completed-state';
+      if(s==='Rework Required') return 'pending-state';
+      return 'draft';
+    };
+    const arrows = sm.states.map((s,i)=> i<sm.states.length-1 ? '<span class="sm-arrow'+(sm.states.indexOf(sm.current)>=i?' active-arrow':'')+'">&#8594;</span>' : '');
+    return sm.states.map((s,i)=>`<div class="sm-node ${nodeClass(s)}" title="${s}">${s}</div>${arrows[i]||''}`).join('');
+  }
+  function renderTransTable(sm) {
+    return `<table style="font-size:.82rem;margin-top:10px"><tr><th>From</th><th>To</th><th>Trigger</th><th>Guard</th></tr>
+      ${sm.transitions.map(t=>`<tr><td>${t.from}</td><td>${t.to}</td><td><span class="wf-trigger">${t.trigger}</span></td><td><span class="wf-guard">${t.guard}</span></td></tr>`).join('')}</table>`;
+  }
+  return `
+    <div class="alert alert-info">&#9881; Workflow state machines govern all entity transitions. Every action triggers: audit log, role validation, notification, dashboard recalculation, and financial recalculation (if applicable). All transitions execute within database transaction boundaries.</div>
+    <div class="wf-grid">
+      ${Object.entries(STATE_MACHINES).map(([key,sm])=>`
+        <div class="wf-card">
+          <div class="wf-card-head"><h4>${sm.name}</h4><span class="entity">${sm.entity}</span></div>
+          <div class="wf-card-body">
+            <div class="sm-flow">${renderSmFlow(sm)}</div>
+            <div class="sm-legend" style="margin-top:8px">
+              <span><span class="dot" style="background:#dbeafe;border:2px solid #3b82f6"></span> Current</span>
+              <span><span class="dot" style="background:#dcfce7;border:2px solid #16a34a"></span> Passed</span>
+              <span><span class="dot" style="background:#f3f4f6;border:2px solid #9ca3af"></span> Upcoming</span>
+              <span><span class="dot" style="background:#fee2e2;border:2px solid #dc2626"></span> Exception</span>
+            </div>
+            ${renderTransTable(sm)}
+            ${sm.rules?`<div style="margin-top:8px">${sm.rules.map(r=>`<div class="guard-badge unmet" style="margin:2px">&#9888; ${r}</div>`).join('')}</div>`:''}
+            ${sm.blocking?`<div style="margin-top:8px"><b style="font-size:.78rem;color:var(--danger)">Blocking Conditions:</b>${sm.blocking.map(b=>`<div class="guard-badge unmet" style="margin:2px">${b}</div>`).join('')}</div>`:''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="panel" style="margin-top:24px">
+      <div class="panel-head"><h3>System Event Engine Logic</h3></div>
+      <div class="panel-body">
+        <p style="font-size:.88rem;color:var(--gray-600);margin-bottom:12px">Every state transition automatically triggers the following system events:</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+          ${['Audit Log Entry','Role Validation','Notification Dispatch','Dashboard Recalculation','Financial Recalculation'].map(e=>`
+            <div style="background:var(--gray-50);padding:12px;border-radius:8px;border-left:3px solid var(--primary)">
+              <div style="font-weight:600;font-size:.88rem">&#9889; ${e}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+// ---------- AUDIT LOG PAGE ----------
+PAGE_RENDERERS['auditlog'] = () => `
+  <div class="cards" style="grid-template-columns:repeat(4,1fr)">
+    <div class="card"><div class="card-header"><h3>Total Events</h3></div><div class="big-num">${AUDIT_LOG.length}</div></div>
+    <div class="card"><div class="card-header"><h3>State Changes</h3></div><div class="big-num" style="color:var(--primary)">${AUDIT_LOG.filter(a=>a.from!==a.to).length}</div></div>
+    <div class="card"><div class="card-header"><h3>Warnings</h3></div><div class="big-num" style="color:var(--warning)">${AUDIT_LOG.filter(a=>a.type==='warning').length}</div></div>
+    <div class="card"><div class="card-header"><h3>Critical</h3></div><div class="big-num" style="color:var(--danger)">${AUDIT_LOG.filter(a=>a.type==='danger').length}</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Activity Timeline</h3><span style="font-size:.82rem;color:var(--gray-500)">All state transitions and system events</span></div>
+    <div class="panel-body">
+      <div class="audit-timeline">
+        ${AUDIT_LOG.map(a=>`
+          <div class="audit-entry entry-${a.type}">
+            <div class="audit-action">${a.action}</div>
+            <div style="margin:4px 0;font-size:.84rem">${a.details}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">
+              <span class="badge-pill badge-blue">${a.entity}</span>
+              <span class="badge-pill badge-gray">${a.entityId}</span>
+              ${a.from!==a.to?`<span class="badge-pill badge-yellow">${a.from} &#8594; ${a.to}</span>`:''}
+            </div>
+            <div class="audit-meta">
+              <span>&#128339; ${a.timestamp}</span>
+              <span>&#128100; ${a.user}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Transition Log Table</h3></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>#</th><th>Timestamp</th><th>Entity</th><th>ID</th><th>From State</th><th>To State</th><th>Action</th><th>User</th></tr>
+        ${AUDIT_LOG.map(a=>`<tr>
+          <td>${a.id}</td><td style="white-space:nowrap">${a.timestamp}</td>
+          <td><span class="badge-pill badge-blue">${a.entity}</span></td>
+          <td><b>${a.entityId}</b></td>
+          <td>${statusBadge(a.from)}</td><td>${statusBadge(a.to)}</td>
+          <td>${a.action}</td><td>${a.user}</td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- QUALITY INSPECTOR DASHBOARD ----------
+PAGE_RENDERERS['inspector_dashboard'] = () => `
+  <div class="alert alert-info">&#128269; Welcome, Quality Inspector. You have <b>1 upcoming inspection</b> and <b>2 open defects</b> to track.</div>
+  <div class="cards">
+    <div class="card"><div class="card-header"><h3>Upcoming Inspections</h3><div class="stat-icon blue">&#128269;</div></div><div class="big-num">${INSPECTIONS.filter(i=>i.status==='Scheduled').length}</div></div>
+    <div class="card"><div class="card-header"><h3>Open Defects</h3><div class="stat-icon red">&#9888;</div></div><div class="big-num" style="color:var(--danger)">${DEFECTS.filter(d=>d.status!=='Closed').length}</div></div>
+    <div class="card"><div class="card-header"><h3>Inspections Done</h3><div class="stat-icon green">&#10003;</div></div><div class="big-num" style="color:var(--success)">${INSPECTIONS.filter(i=>['Passed','Failed','Conditional'].includes(i.status)).length}</div></div>
+    <div class="card"><div class="card-header"><h3>Pass Rate</h3><div class="stat-icon cyan">&#128202;</div></div><div class="big-num">50%</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h3>Upcoming Inspections</h3><button class="btn btn-sm btn-primary">+ Schedule</button></div>
+      <div class="panel-body">
+        ${INSPECTIONS.filter(i=>i.status==='Scheduled').map(i=>`
+          <div style="padding:14px;background:var(--gray-50);border-radius:8px;margin-bottom:10px;border-left:4px solid var(--primary)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><b>${i.id}</b> - ${i.stage} Stage</div>${statusBadge(i.status)}
+            </div>
+            <div style="font-size:.84rem;color:var(--gray-600);margin-top:6px">Date: ${i.date} | Inspector: ${i.by}</div>
+            <div class="transition-actions">
+              <button class="btn-transition advance" onclick="showApproval('Start Inspection','Stage: ${i.stage}<br>Inspector: ${i.by}<br>Date: ${i.date}<br><br>Guard: Inspector must be on-site')">&#9654; Start Inspection</button>
+            </div>
+          </div>
+        `).join('')}
+        ${INSPECTIONS.filter(i=>i.status!=='Scheduled').map(i=>`
+          <div style="padding:12px;border-radius:8px;margin-bottom:8px;border:1px solid var(--gray-200)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><b>${i.id}</b> - ${i.stage}</div>${statusBadge(i.status)}
+            </div>
+            <div style="font-size:.82rem;color:var(--gray-500);margin-top:4px">${i.date} | Defects: ${i.defects}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Inspection State Machine</h3></div>
+      <div class="panel-body">
+        <div class="sm-flow">
+          ${STATE_MACHINES.inspection.states.map((s,i)=>{
+            const cls = s===STATE_MACHINES.inspection.current?'active-state':i<STATE_MACHINES.inspection.states.indexOf(STATE_MACHINES.inspection.current)?'completed-state':s==='Failed'?'blocked-state':s==='Conditional'?'pending-state':'draft';
+            return `<div class="sm-node ${cls}">${s}</div>${i<STATE_MACHINES.inspection.states.length-1?'<span class="sm-arrow">&#8594;</span>':''}`;
+          }).join('')}
+        </div>
+        <div style="margin-top:16px">
+          <h4 style="font-size:.88rem;margin-bottom:8px">Defect States</h4>
+          <div class="sm-flow">
+            ${['Open','Assigned','In Progress','Resolved','Closed'].map((s,i)=>`<div class="sm-node ${i<2?'blocked-state':i===2?'active-state':i===3?'pending-state':'completed-state'}" style="font-size:.78rem;padding:8px 12px">${s}</div>${i<4?'<span class="sm-arrow">&#8594;</span>':''}`).join('')}
+          </div>
+        </div>
+        <div class="sp62-note" style="margin-top:12px;border-left-color:var(--danger)">
+          <b>Rule:</b> Stage remains blocked while any defect status ≠ Closed. Payment cannot be released until all critical defects are resolved.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Open Defects - Reinspection Queue</h3></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>ID</th><th>Inspection</th><th>Description</th><th>Severity</th><th>Status</th><th>Assigned</th><th>Action</th></tr>
+        ${DEFECTS.map(d=>`<tr>
+          <td><b>${d.id}</b></td><td>${d.inspection}</td><td>${d.desc}</td>
+          <td><span class="badge-pill badge-${d.severity==='High'?'red':'yellow'}">${d.severity}</span></td>
+          <td>${statusBadge(d.status)}</td><td>${d.assigned}</td>
+          <td>${d.status==='In Progress'?'<button class="btn btn-sm btn-success">Verify Fix</button>':'<button class="btn btn-sm btn-outline">Track</button>'}</td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- DEFECTS PAGE (Inspector) ----------
+PAGE_RENDERERS['defects'] = () => `
+  <div class="cards" style="grid-template-columns:repeat(4,1fr)">
+    <div class="card"><div class="card-header"><h3>Total Defects</h3></div><div class="big-num">${DEFECTS.length}</div></div>
+    <div class="card"><div class="card-header"><h3>Open</h3></div><div class="big-num" style="color:var(--danger)">${DEFECTS.filter(d=>d.status==='Open').length}</div></div>
+    <div class="card"><div class="card-header"><h3>In Progress</h3></div><div class="big-num" style="color:var(--primary)">${DEFECTS.filter(d=>d.status==='In Progress').length}</div></div>
+    <div class="card"><div class="card-header"><h3>Closed</h3></div><div class="big-num" style="color:var(--success)">${DEFECTS.filter(d=>d.status==='Closed').length}</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>All Defects</h3><button class="btn btn-sm btn-danger">+ Log New Defect</button></div>
+    <div class="panel-body table-wrap">
+      <table>
+        <tr><th>ID</th><th>Inspection</th><th>Description</th><th>Severity</th><th>Status</th><th>Assigned To</th><th>Action</th></tr>
+        ${DEFECTS.map(d=>`<tr>
+          <td><b>${d.id}</b></td><td>${d.inspection}</td><td>${d.desc}</td>
+          <td><span class="badge-pill badge-${d.severity==='High'?'red':'yellow'}">${d.severity}</span></td>
+          <td>${statusBadge(d.status)}</td><td>${d.assigned}</td>
+          <td>
+            ${d.status==='In Progress'?'<button class="btn btn-sm btn-success">Mark Resolved</button>':''}
+            ${d.status==='Open'?'<button class="btn btn-sm btn-primary">Assign</button>':''}
+          </td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Defect State Machine</h3></div>
+    <div class="panel-body">
+      <div class="sm-flow">
+        ${['Open','Assigned','In Progress','Resolved','Closed'].map((s,i)=>`<div class="sm-node ${s==='Open'?'blocked-state':s==='In Progress'?'active-state':s==='Closed'?'completed-state':'pending-state'}">${s}</div>${i<4?'<span class="sm-arrow">&#8594;</span>':''}`).join('')}
+      </div>
+      <table style="font-size:.82rem;margin-top:12px">
+        <tr><th>From</th><th>To</th><th>Trigger</th><th>Guard</th></tr>
+        <tr><td>Open</td><td>Assigned</td><td><span class="wf-trigger">PM Assigns</span></td><td><span class="wf-guard">Contractor identified</span></td></tr>
+        <tr><td>Assigned</td><td>In Progress</td><td><span class="wf-trigger">Work Started</span></td><td><span class="wf-guard">Contractor acknowledges</span></td></tr>
+        <tr><td>In Progress</td><td>Resolved</td><td><span class="wf-trigger">Fix Complete</span></td><td><span class="wf-guard">Evidence uploaded</span></td></tr>
+        <tr><td>Resolved</td><td>Closed</td><td><span class="wf-trigger">Inspector Verifies</span></td><td><span class="wf-guard">Re-inspection passed</span></td></tr>
+      </table>
+    </div>
+  </div>
+`;
+
+// ---------- FALLBACK ----------
+PAGE_RENDERERS['default_dashboard'] = PAGE_RENDERERS['pm_dashboard'];
+
+// ========== TAB SWITCHING ==========
+function switchTab(tabGroup, contentId) {
+  const parent = document.getElementById(tabGroup);
+  parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  let sibling = parent.nextElementSibling;
+  while(sibling && sibling.classList.contains('tab-content')) {
+    sibling.classList.toggle('active', sibling.id === contentId);
+    sibling = sibling.nextElementSibling;
+  }
+}
+
+// ========== APPROVAL MODAL ==========
+function showApproval(title, body) {
+  document.getElementById('approvalTitle').textContent = title;
+  document.getElementById('approvalBody').innerHTML = `<div style="line-height:1.8;font-size:.92rem">${body}</div>
+    <div class="form-group" style="margin-top:16px"><label>Remarks</label><textarea style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:8px;min-height:60px;font-family:inherit" placeholder="Add remarks (optional)..."></textarea></div>`;
+  showModal('approvalModal');
+}
+</script>
+
+<!-- NEW MATERIAL REQUEST MODAL -->
+<div class="modal-overlay" id="newMaterialModal">
+  <div class="modal">
+    <div class="modal-header"><h3>New Material Request</h3><button class="modal-close" onclick="hideModal('newMaterialModal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Stage</label><select><option>Structure</option><option>Brickwork</option><option>Roofing</option></select></div>
+      <div class="form-group"><label>Material</label><select><option>TMT Steel 12mm</option><option>TMT Steel 16mm</option><option>OPC Cement 53 Grade</option><option>River Sand</option><option>M20 Concrete</option><option>Bricks Class A</option></select></div>
+      <div class="form-group"><label>Quantity</label><input type="number" placeholder="Enter quantity"></div>
+      <div class="form-group"><label>Unit</label><input type="text" placeholder="kg, bags, units, etc."></div>
+      <div class="form-group"><label>Remarks</label><textarea style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:8px;min-height:60px;font-family:inherit" placeholder="Justification for request..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm btn-outline" onclick="hideModal('newMaterialModal')">Cancel</button>
+      <button class="btn btn-sm btn-primary" onclick="hideModal('newMaterialModal')">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

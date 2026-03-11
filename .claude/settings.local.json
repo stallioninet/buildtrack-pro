@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(echo === Engineer dashboard stats ===:*)",
+      "Bash(echo === Login as Owner ===:*)",
+      "Bash(echo === PM updates task T-008 ===:*)",
+      "Bash(echo === Inspector login + dashboard ===:*)",
+      "Bash(echo ===== FINAL VERIFICATION SUMMARY =====:*)",
+      "WebFetch(domain:www.houseyog.com)",
+      "WebFetch(domain:civiconcepts.com)",
+      "WebFetch(domain:gharpedia.com)",
+      "Bash(npx:*)",
+      "Bash(npm run:*)",
+      "Bash(curl:*)",
+      "Bash(fuser:*)",
+      "Bash(sqlite3:*)",
+      "Bash(node:*)",
+      "WebSearch",
+      "Bash(grep:*)",
+      "Bash(kill 12073 && sleep 2 && lsof -i :3001 2>/dev/null || echo \"Port 3001 freed\")",
+      "Bash(lsof -ti:3001 | xargs kill -9 2>/dev/null; lsof -ti:5173 | xargs kill -9 2>/dev/null; sleep 1; echo \"ports freed\")"
+    ]
+  }
+}
