@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: buildtrack-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    repo: https://github.com/stallioninet/buildtrack-pro
+    branch: main
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://construction-ebon-alpha.vercel.app
