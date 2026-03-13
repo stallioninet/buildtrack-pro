@@ -1,80 +1,72 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../api/client';
 import { useProject } from '../../context/ProjectContext';
+import { useApi } from '../../hooks/useApi';
+import { api } from '../../api/client';
 import StatCard from '../../components/ui/StatCard';
 import Badge from '../../components/ui/Badge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import {
+  DEFAULT_LAYOUTS, WidgetPicker, renderWidget,
+} from '../../components/shared/DashboardWidgets';
 
 export default function AccountsDashboard() {
   const { currentProject } = useProject();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const pid = currentProject?.id;
+  const url = pid ? `/dashboard?project_id=${pid}` : '/dashboard';
+  const { data, loading } = useApi(url);
+  const [layout, setLayout] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
-    const pid = currentProject?.id;
-    const url = pid ? `/dashboard?project_id=${pid}` : '/dashboard';
-    setLoading(true);
-    api.get(url).then(setData).catch(console.error).finally(() => setLoading(false));
-  }, [currentProject?.id]);
+    api.get('/dashboard/layout')
+      .then(res => setLayout(res?.layout || DEFAULT_LAYOUTS.accounts))
+      .catch(() => setLayout(DEFAULT_LAYOUTS.accounts));
+  }, []);
 
-  if (loading) return <div className="text-center py-12 text-slate-500">Loading dashboard...</div>;
+  if (loading || !layout) return <div className="text-center py-12 text-slate-500">Loading dashboard...</div>;
   if (!data) return <div className="text-center py-12 text-red-500">Failed to load dashboard</div>;
 
-  const { stats, recentExpenses, recentPayments } = data;
+  const { stats } = data;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Accounts Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1">Financial overview and approvals</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Accounts Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">Financial overview and approvals</p>
+        </div>
+        <button onClick={() => setShowPicker(true)}
+          className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center gap-1.5">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Customize
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Budget" value={formatCurrency(stats?.totalBudget)} color="blue" />
-        <StatCard label="Total Spent" value={formatCurrency(stats?.totalSpent)} color="green" />
-        <StatCard label="Budget Remaining" value={formatCurrency((stats?.totalBudget || 0) - (stats?.totalSpent || 0))} color="purple" />
-        <StatCard label="Total Expenses" value={formatCurrency(stats?.totalExpenses)} color="orange" />
-        <StatCard label="Pending Payments" value={stats?.pendingPayments || 0} color="yellow" />
-        <StatCard label="Pending Expenses" value={stats?.pendingExpenses || 0} color="red" />
-      </div>
+      {layout.includes('stat_cards') && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StatCard label="Total Budget" value={formatCurrency(stats?.totalBudget)} color="blue" />
+          <StatCard label="Total Spent" value={formatCurrency(stats?.totalSpent)} color="green" />
+          <StatCard label="Budget Remaining" value={formatCurrency((stats?.totalBudget || 0) - (stats?.totalSpent || 0))} color="purple" />
+          <StatCard label="Total Expenses" value={formatCurrency(stats?.totalExpenses)} color="orange" />
+          <StatCard label="Pending Payments" value={stats?.pendingPayments || 0} color="yellow" />
+          <StatCard label="Pending Expenses" value={stats?.pendingExpenses || 0} color="red" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Recent Expenses</h3>
-          <div className="space-y-3">
-            {recentExpenses?.map((exp) => (
-              <div key={exp.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{exp.category}</p>
-                  <p className="text-xs text-slate-400">{exp.description} | {formatDate(exp.expense_date)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-800">{formatCurrency(exp.amount)}</p>
-                  <Badge status={exp.status} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Recent Payments</h3>
-          <div className="space-y-3">
-            {recentPayments?.map((pay) => (
-              <div key={pay.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{pay.payment_code}</p>
-                  <p className="text-xs text-slate-400">{pay.vendor_name} | {pay.stage_name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-800">{formatCurrency(pay.amount)}</p>
-                  <Badge status={pay.status} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {layout.filter(id => id !== 'stat_cards').map(widgetId => renderWidget(widgetId, data))}
       </div>
+
+      {showPicker && (
+        <WidgetPicker
+          currentLayout={layout}
+          role="accounts"
+          onSave={(newLayout) => { setLayout(newLayout); setShowPicker(false); }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
     </div>
   );
 }

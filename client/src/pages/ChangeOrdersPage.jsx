@@ -5,9 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import Badge from '../components/ui/Badge';
 import StatCard from '../components/ui/StatCard';
+import { showError, showWarning } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
+import Pagination from '../components/ui/Pagination';
+import { CHANGE_ORDER_STATUSES as STATUSES, CHANGE_ORDER_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
+import { useModal } from '../hooks/useModal';
 
-const STATUSES = ['Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Executed', 'Void'];
 const TYPES = [
   { value: 'scope_change', label: 'Scope Change' },
   { value: 'design_change', label: 'Design Change' },
@@ -17,16 +20,6 @@ const TYPES = [
   { value: 'value_engineering', label: 'Value Engineering' },
 ];
 
-const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-600',
-  Submitted: 'bg-blue-100 text-blue-700',
-  'Under Review': 'bg-amber-100 text-amber-700',
-  Approved: 'bg-green-100 text-green-700',
-  Rejected: 'bg-red-100 text-red-700',
-  Executed: 'bg-purple-100 text-purple-700',
-  Void: 'bg-slate-200 text-slate-500',
-};
-
 export default function ChangeOrdersPage() {
   const { currentProject } = useProject();
   const { user } = useAuth();
@@ -34,8 +27,9 @@ export default function ChangeOrdersPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '' });
-  const [showModal, setShowModal] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const modal = useModal();
   const [stages, setStages] = useState([]);
 
   const canCreate = ['owner', 'pm', 'engineer'].includes(user?.role);
@@ -45,15 +39,21 @@ export default function ChangeOrdersPage() {
     if (!currentProject?.id) return;
     const pid = currentProject.id;
     Promise.all([
-      api.get(`/change-orders?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}`),
+      api.get(`/change-orders?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}&page=${page}&limit=50`),
       api.get(`/change-orders/summary?project_id=${pid}`),
     ]).then(([data, sum]) => {
-      setItems(data);
+      if (data && data.data) {
+        setItems(data.data);
+        setPagination(data.pagination);
+      } else {
+        setItems(Array.isArray(data) ? data : []);
+        setPagination(null);
+      }
       setSummary(sum);
     }).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, [currentProject?.id, filter]);
+  useEffect(() => { loadData(); }, [currentProject?.id, filter, page]);
 
   useEffect(() => {
     if (!currentProject?.id) return;
@@ -64,12 +64,12 @@ export default function ChangeOrdersPage() {
     try {
       await api.patch(`/change-orders/${item.id}/status`, { status: newStatus });
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this change order?')) return;
-    try { await api.delete(`/change-orders/${id}`); loadData(); } catch (err) { alert(err.message); }
+    try { await api.delete(`/change-orders/${id}`); loadData(); } catch (err) { showError(err.message); }
   };
 
   if (!currentProject) return <div className="text-center py-12 text-slate-400">Select a project first</div>;
@@ -82,7 +82,7 @@ export default function ChangeOrdersPage() {
           <p className="text-sm text-slate-500 mt-1">Track scope changes, cost and schedule impacts</p>
         </div>
         {canCreate && (
-          <button onClick={() => { setSelected(null); setShowModal(true); }}
+          <button onClick={() => modal.open('create')}
             className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
             + New Change Order
           </button>
@@ -99,7 +99,7 @@ export default function ChangeOrdersPage() {
       )}
 
       <div className="flex items-center gap-2">
-        <select value={filter.status} onChange={e => setFilter({ status: e.target.value })}
+        <select value={filter.status} onChange={e => { setFilter({ status: e.target.value }); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -112,6 +112,7 @@ export default function ChangeOrdersPage() {
         <div className="text-center py-12 text-slate-400 text-sm">No change orders found</div>
       ) : (
         <div className="space-y-3">
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
           {items.map(co => (
             <div key={co.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-start justify-between gap-3">
@@ -126,7 +127,7 @@ export default function ChangeOrdersPage() {
                     </span>
                   </div>
                   <h3 className="text-sm font-semibold text-slate-800 cursor-pointer hover:text-blue-600"
-                    onClick={() => { setSelected(co); setShowModal(true); }}>
+                    onClick={() => modal.open('edit', co)}>
                     {co.title}
                   </h3>
                   <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400 flex-wrap">
@@ -161,13 +162,14 @@ export default function ChangeOrdersPage() {
               </div>
             </div>
           ))}
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
         </div>
       )}
 
-      {showModal && (
-        <COModal co={selected} projectId={currentProject.id} stages={stages}
-          onClose={() => { setShowModal(false); setSelected(null); }}
-          onSaved={() => { setShowModal(false); setSelected(null); loadData(); }} />
+      {(modal.isOpen('create') || modal.isOpen('edit')) && (
+        <COModal co={modal.data('edit')} projectId={currentProject.id} stages={stages}
+          onClose={() => modal.closeAll()}
+          onSaved={() => { modal.closeAll(); loadData(); }} />
       )}
     </div>
   );
@@ -184,13 +186,13 @@ function COModal({ co, projectId, stages, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.title.trim()) return alert('Title is required');
+    if (!form.title.trim()) return showWarning('Title is required');
     setSaving(true);
     try {
       if (isEdit) await api.patch(`/change-orders/${co.id}`, form);
       else await api.post('/change-orders', { ...form, project_id: projectId });
       onSaved();
-    } catch (err) { alert(err.message || 'Failed to save'); }
+    } catch (err) { showError(err.message || 'Failed to save'); }
     finally { setSaving(false); }
   };
 

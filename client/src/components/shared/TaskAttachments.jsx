@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { showError } from '../../utils/toast';
+import FilePreviewModal from './FilePreviewModal';
+import PhotoMarkup from './PhotoMarkup';
 
 const FILE_ICONS = {
   'application/pdf': { icon: 'PDF', color: 'bg-red-100 text-red-700' },
@@ -69,8 +72,8 @@ export default function TaskAttachments({ taskId, taskTitle, onClose, initialTab
   const [uploading, setUploading] = useState(false);
   const [category, setCategory] = useState(initialTab === 'photos' ? 'photo' : 'general');
   const [dragActive, setDragActive] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [previewName, setPreviewName] = useState('');
+  const [previewAttachment, setPreviewAttachment] = useState(null);
+  const [markupAttachment, setMarkupAttachment] = useState(null);
   const [previewIndex, setPreviewIndex] = useState(-1);
   const [tab, setTab] = useState(initialTab === 'photos' ? 'photos' : 'files');
   const fileInputRef = useRef(null);
@@ -97,7 +100,7 @@ export default function TaskAttachments({ taskId, taskTitle, onClose, initialTab
       await api.upload(`/tasks/${taskId}/attachments`, files, uploadCategory || category);
       loadAttachments();
     } catch (err) {
-      alert(err.message || 'Upload failed');
+      showError(err.message || 'Upload failed');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -128,18 +131,13 @@ export default function TaskAttachments({ taskId, taskTitle, onClose, initialTab
       await api.delete(`/tasks/attachments/${attId}`);
       loadAttachments();
     } catch (err) {
-      alert(err.message || 'Delete failed');
+      showError(err.message || 'Delete failed');
     }
   };
 
   const handleView = (att, idx) => {
-    if (isPreviewable(att.mime_type)) {
-      setPreviewUrl(`/api/tasks/attachments/${att.id}/view`);
-      setPreviewName(att.original_name);
-      setPreviewIndex(idx ?? -1);
-    } else {
-      window.open(`/api/tasks/attachments/${att.id}/download`, '_blank');
-    }
+    setPreviewAttachment(att);
+    setPreviewIndex(idx ?? -1);
   };
 
   const handleDownload = (att) => {
@@ -161,13 +159,12 @@ export default function TaskAttachments({ taskId, taskTitle, onClose, initialTab
     grouped[cat].push(att);
   }
 
-  // Photo lightbox navigation
-  const navigatePhoto = (direction) => {
+  // File preview navigation — works in both photo and file contexts
+  const previewList = tab === 'photos' ? photos : nonPhotos;
+  const navigatePreview = (direction) => {
     const newIdx = previewIndex + direction;
-    if (newIdx >= 0 && newIdx < photos.length) {
-      const photo = photos[newIdx];
-      setPreviewUrl(`/api/tasks/attachments/${photo.id}/view`);
-      setPreviewName(photo.original_name);
+    if (newIdx >= 0 && newIdx < previewList.length) {
+      setPreviewAttachment(previewList[newIdx]);
       setPreviewIndex(newIdx);
     }
   };
@@ -314,6 +311,16 @@ export default function TaskAttachments({ taskId, taskTitle, onClose, initialTab
                           <p className="text-[10px] text-white/70">{formatFileSize(photo.file_size)} · {photo.uploaded_by_name}</p>
                         </div>
                       </div>
+                      {/* Markup button */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setMarkupAttachment(photo); }}
+                        className="absolute top-1.5 left-1.5 p-1 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600"
+                        title="Annotate / Markup"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
                       {/* Delete button */}
                       {(canDelete || photo.uploaded_by === user?.id) && (
                         <button
@@ -425,15 +432,13 @@ export default function TaskAttachments({ taskId, taskTitle, onClose, initialTab
                               </div>
                             </div>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {isPreviewable(att.mime_type) && (
-                                <button onClick={() => handleView(att)} title="Preview"
-                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                  </svg>
-                                </button>
-                              )}
+                              <button onClick={() => { const idx = nonPhotos.indexOf(att); handleView(att, idx >= 0 ? idx : -1); }} title="Preview"
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </button>
                               <button onClick={() => handleDownload(att)} title="Download"
                                 className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,55 +465,26 @@ export default function TaskAttachments({ taskId, taskTitle, onClose, initialTab
           )}
         </div>
 
-        {/* Photo lightbox with navigation */}
-        {previewUrl && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4"
-            onClick={() => { setPreviewUrl(null); setPreviewName(''); setPreviewIndex(-1); }}>
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col"
-              onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                <span className="text-sm font-medium text-slate-700 truncate">{previewName}</span>
-                <div className="flex items-center gap-2">
-                  {previewIndex >= 0 && (
-                    <span className="text-xs text-slate-400">{previewIndex + 1} / {photos.length}</span>
-                  )}
-                  <a href={previewUrl.replace('/view', '/download')} download
-                    className="px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100">
-                    Download
-                  </a>
-                  <button onClick={() => { setPreviewUrl(null); setPreviewName(''); setPreviewIndex(-1); }}
-                    className="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-auto p-2 flex items-center justify-center bg-slate-100 relative">
-                {/* Previous button */}
-                {previewIndex > 0 && (
-                  <button onClick={() => navigatePhoto(-1)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                )}
+        {/* File preview modal */}
+        {previewAttachment && (
+          <FilePreviewModal
+            attachment={previewAttachment}
+            onClose={() => { setPreviewAttachment(null); setPreviewIndex(-1); }}
+            onPrev={previewIndex > 0 ? () => navigatePreview(-1) : undefined}
+            onNext={previewIndex >= 0 && previewIndex < previewList.length - 1 ? () => navigatePreview(1) : undefined}
+            currentIndex={previewIndex >= 0 ? previewIndex : undefined}
+            totalCount={previewIndex >= 0 ? previewList.length : undefined}
+          />
+        )}
 
-                {previewName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ? (
-                  <img src={previewUrl} alt={previewName} className="max-w-full max-h-[70vh] object-contain" />
-                ) : (
-                  <iframe src={previewUrl} className="w-full h-[70vh] border-0 rounded" title={previewName} />
-                )}
-
-                {/* Next button */}
-                {previewIndex >= 0 && previewIndex < photos.length - 1 && (
-                  <button onClick={() => navigatePhoto(1)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Photo markup modal */}
+        {markupAttachment && (
+          <PhotoMarkup
+            imageUrl={`/api/tasks/attachments/${markupAttachment.id}/view`}
+            attachmentId={markupAttachment.id}
+            onClose={() => setMarkupAttachment(null)}
+            onSaved={() => setMarkupAttachment(null)}
+          />
         )}
 
         {/* Footer */}

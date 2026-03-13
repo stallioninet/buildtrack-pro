@@ -4,17 +4,12 @@ import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import Badge from '../components/ui/Badge';
 import { formatCurrency, formatDate } from '../utils/formatters';
-
-const CATEGORIES = ['Labor', 'Material', 'Equipment', 'Transport', 'Permits', 'Utilities', 'Subcontractor', 'Overhead', 'Other'];
-const STATUSES = ['Draft', 'Pending Approval', 'Approved', 'Rejected', 'Paid'];
-
-const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-700',
-  'Pending Approval': 'bg-amber-100 text-amber-700',
-  Approved: 'bg-green-100 text-green-700',
-  Rejected: 'bg-red-100 text-red-700',
-  Paid: 'bg-blue-100 text-blue-700',
-};
+import { showError, showWarning } from '../utils/toast';
+import Pagination from '../components/ui/Pagination';
+import FormInput from '../components/ui/FormInput';
+import useFormValidation from '../hooks/useFormValidation';
+import { EXPENSE_CATEGORIES as CATEGORIES, EXPENSE_STATUSES as STATUSES, EXPENSE_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 export default function ExpensesPage() {
   const { currentProject } = useProject();
@@ -23,6 +18,8 @@ export default function ExpensesPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '', category: '' });
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [stages, setStages] = useState([]);
@@ -35,15 +32,21 @@ export default function ExpensesPage() {
     if (!currentProject?.id) return;
     const pid = currentProject.id;
     Promise.all([
-      api.get(`/expenses?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}${filter.category ? `&category=${filter.category}` : ''}`),
+      api.get(`/expenses?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}${filter.category ? `&category=${filter.category}` : ''}&page=${page}&limit=50`),
       api.get(`/expenses/summary?project_id=${pid}`),
     ]).then(([expensesData, summaryData]) => {
-      setExpenses(expensesData);
+      if (expensesData && expensesData.data) {
+        setExpenses(expensesData.data);
+        setPagination(expensesData.pagination);
+      } else {
+        setExpenses(Array.isArray(expensesData) ? expensesData : []);
+        setPagination(null);
+      }
       setSummary(summaryData);
     }).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, [currentProject?.id, filter]);
+  useEffect(() => { loadData(); }, [currentProject?.id, filter, page]);
 
   useEffect(() => {
     if (!currentProject?.id) return;
@@ -55,7 +58,7 @@ export default function ExpensesPage() {
       await api.patch(`/expenses/${expense.id}/status`, { status: newStatus });
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -66,7 +69,7 @@ export default function ExpensesPage() {
       await api.delete(`/expenses/${expense.id}`);
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to delete expense');
+      showError(err.message || 'Failed to delete expense');
     }
   };
 
@@ -116,12 +119,12 @@ export default function ExpensesPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
+        <select value={filter.status} onChange={e => { setFilter(f => ({ ...f, status: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}
+        <select value={filter.category} onChange={e => { setFilter(f => ({ ...f, category: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -130,7 +133,7 @@ export default function ExpensesPage() {
 
       {/* Expenses Table */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400 text-sm">Loading expenses...</div>
+        <SkeletonTable rows={6} />
       ) : expenses.length === 0 ? (
         <div className="text-center py-12 text-slate-400 text-sm">No expenses found</div>
       ) : (
@@ -190,6 +193,7 @@ export default function ExpensesPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
         </div>
       )}
 
@@ -217,10 +221,14 @@ function ExpenseModal({ expense, projectId, stages, onClose, onSaved }) {
     stage_id: expense?.stage_id || '',
   });
   const [saving, setSaving] = useState(false);
+  const { errors, validate, clearError } = useFormValidation({
+    amount: { required: true, label: 'Amount', min: 0.01, message: 'Amount is required and must be greater than 0' },
+    expense_date: { required: true, label: 'Date' },
+    category: { required: true, label: 'Category' },
+  });
 
   const handleSave = async () => {
-    if (!form.amount || parseFloat(form.amount) <= 0) return alert('Amount is required and must be greater than 0');
-    if (!form.expense_date) return alert('Date is required');
+    if (!validate(form)) return;
     setSaving(true);
     try {
       const payload = { ...form, amount: parseFloat(form.amount) };
@@ -231,7 +239,7 @@ function ExpenseModal({ expense, projectId, stages, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save expense');
+      showError(err.message || 'Failed to save expense');
     } finally {
       setSaving(false);
     }
@@ -252,28 +260,23 @@ function ExpenseModal({ expense, projectId, stages, onClose, onSaved }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Row: Date + Category */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-slate-500 font-medium">Date *</label>
-              <input type="date" value={form.expense_date} onChange={e => set('expense_date', e.target.value)}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1" />
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 font-medium">Category</label>
-              <select value={form.category} onChange={e => set('category', e.target.value)}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1">
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+            <FormInput label="Date" required name="expense_date" type="date" value={form.expense_date}
+              onChange={e => { set('expense_date', e.target.value); clearError('expense_date'); }}
+              error={errors.expense_date} />
+            <FormInput label="Category" required name="category" type="select" value={form.category}
+              onChange={e => { set('category', e.target.value); clearError('category'); }}
+              error={errors.category}>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </FormInput>
           </div>
 
           {/* Row: Amount + Stage */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-slate-500 font-medium">Amount *</label>
-              <input type="number" step="0.01" min="0" value={form.amount} onChange={e => set('amount', e.target.value)}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1"
-                placeholder="0.00" />
-            </div>
+            <FormInput label="Amount" required name="amount" type="number" step="0.01" min="0"
+              value={form.amount}
+              onChange={e => { set('amount', e.target.value); clearError('amount'); }}
+              error={errors.amount}
+              placeholder="0.00" />
             <div>
               <label className="text-xs text-slate-500 font-medium">Stage</label>
               <select value={form.stage_id} onChange={e => set('stage_id', e.target.value)}

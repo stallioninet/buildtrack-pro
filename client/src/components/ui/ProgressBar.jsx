@@ -1,4 +1,6 @@
-export default function ProgressBar({ value = 0, className = '' }) {
+import { memo } from 'react';
+
+function ProgressBar({ value = 0, className = '' }) {
   const color = value >= 80 ? 'bg-green-500' : value >= 40 ? 'bg-blue-500' : 'bg-yellow-500';
 
   return (
@@ -10,3 +12,5 @@ export default function ProgressBar({ value = 0, className = '' }) {
     </div>
   );
 }
+
+export default memo(ProgressBar);

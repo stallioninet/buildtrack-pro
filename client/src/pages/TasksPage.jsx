@@ -1,19 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
 import Badge from '../components/ui/Badge';
+import Pagination from '../components/ui/Pagination';
 import TaskStatusSelect from '../components/shared/TaskStatusSelect';
 import TaskCreateModal from '../components/shared/TaskCreateModal';
 import TaskEditModal from '../components/shared/TaskEditModal';
 import TaskAttachments from '../components/shared/TaskAttachments';
+import KanbanBoard from '../components/shared/KanbanBoard';
+import GanttChart from '../components/shared/GanttChart';
 import { formatDate } from '../utils/formatters';
-
-const PRIORITY_COLORS = {
-  high: 'bg-red-100 text-red-700',
-  medium: 'bg-yellow-100 text-yellow-700',
-  low: 'bg-slate-100 text-slate-600',
-};
+import { showError } from '../utils/toast';
+import { PRIORITY_COLORS } from '../config/constants';
+import { SkeletonTable } from '../components/ui/Skeleton';
+import BulkActionBar from '../components/shared/BulkActionBar';
 
 export default function TasksPage() {
   const { user } = useAuth();
@@ -26,14 +27,19 @@ export default function TasksPage() {
   const [attachTask, setAttachTask] = useState(null);
   const [attachTab, setAttachTab] = useState(undefined);
   const [expandedTasks, setExpandedTasks] = useState({});
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'board', or 'gantt'
   const [filters, setFilters] = useState({ stage_id: '', status: '', priority: '' });
   const [stages, setStages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [selectedTasks, setSelectedTasks] = useState(new Set());
+  const [users, setUsers] = useState([]);
 
-  const canCreate = ['pm', 'engineer'].includes(user?.role);
-  const canEdit = ['pm', 'engineer', 'owner'].includes(user?.role);
-  const canDelete = ['pm', 'engineer', 'owner'].includes(user?.role);
-  const canChangeStatus = ['pm', 'engineer', 'contractor'].includes(user?.role);
-  const isReadOnly = user?.role === 'owner';
+  const canCreate = useMemo(() => ['pm', 'engineer'].includes(user?.role), [user?.role]);
+  const canEdit = useMemo(() => ['pm', 'engineer', 'owner'].includes(user?.role), [user?.role]);
+  const canDelete = useMemo(() => ['pm', 'engineer', 'owner'].includes(user?.role), [user?.role]);
+  const canChangeStatus = useMemo(() => ['pm', 'engineer', 'contractor'].includes(user?.role), [user?.role]);
+  const isReadOnly = useMemo(() => user?.role === 'owner', [user?.role]);
 
   const loadTasks = () => {
     const params = new URLSearchParams();
@@ -41,52 +47,125 @@ export default function TasksPage() {
     if (filters.stage_id) params.set('stage_id', filters.stage_id);
     if (filters.status) params.set('status', filters.status);
     if (filters.priority) params.set('priority', filters.priority);
+    params.set('page', page);
+    params.set('limit', 50);
     const qs = params.toString();
-    api.get(`/tasks${qs ? `?${qs}` : ''}`).then(setTasks).catch(console.error).finally(() => setLoading(false));
+    api.get(`/tasks${qs ? `?${qs}` : ''}`).then(res => {
+      if (res && res.data) {
+        setTasks(res.data);
+        setPagination(res.pagination);
+      } else {
+        setTasks(Array.isArray(res) ? res : []);
+        setPagination(null);
+      }
+    }).catch(console.error).finally(() => setLoading(false));
   };
 
   useEffect(() => {
     const params = currentProject?.id ? `?project_id=${currentProject.id}` : '';
     api.get(`/stages${params}`).then(setStages).catch(console.error);
+    if (currentProject?.id) {
+      api.get(`/auth/users?project_id=${currentProject.id}`).then(setUsers).catch(console.error);
+    }
   }, [currentProject?.id]);
 
   useEffect(() => {
     setLoading(true);
     loadTasks();
-  }, [filters, currentProject?.id]);
+  }, [filters, currentProject?.id, page]);
 
-  const handleStatusChange = async (taskId, newStatus) => {
-    try {
-      await api.patch(`/tasks/${taskId}/status`, { status: newStatus });
-      loadTasks();
-    } catch (err) {
-      alert(err.message || 'Failed to update status');
-    }
-  };
+  const handleStatusChange = useCallback(async (taskId, newStatus, note) => {
+    // Optimistically update the task status in local state
+    const updateTaskStatus = (taskList, id, status) =>
+      taskList.map(t => {
+        if (t.id === id) return { ...t, status };
+        if (t.subtasks?.length) return { ...t, subtasks: updateTaskStatus(t.subtasks, id, status) };
+        return t;
+      });
 
-  const handleDelete = async (taskId, taskTitle) => {
+    setTasks(prev => {
+      // Skip if status hasn't changed
+      const findTask = (list, id) => {
+        for (const t of list) {
+          if (t.id === id) return t;
+          if (t.subtasks?.length) { const found = findTask(t.subtasks, id); if (found) return found; }
+        }
+        return null;
+      };
+      const current = findTask(prev, taskId);
+      if (current && current.status === newStatus) return prev;
+
+      const rollback = prev;
+      const updated = updateTaskStatus(prev, taskId, newStatus);
+
+      // Fire the API call, revert on failure
+      const body = { status: newStatus };
+      if (note) body.note = note;
+      api.patch(`/tasks/${taskId}/status`, body)
+        .then(() => loadTasks()) // reload to get any server-side side effects
+        .catch(err => {
+          setTasks(rollback);
+          showError(err.message || 'Failed to update status');
+        });
+
+      return updated;
+    });
+  }, [filters, currentProject?.id, page]);
+
+  const handleDelete = useCallback(async (taskId, taskTitle) => {
     if (!confirm(`Delete "${taskTitle}" and all its subtasks?`)) return;
     try {
       await api.delete(`/tasks/${taskId}`);
       loadTasks();
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      showError(err.message || 'Failed to delete');
     }
-  };
+  }, [filters, currentProject?.id, page]);
 
-  const toggleExpand = (taskId) => {
+  const toggleExpand = useCallback((taskId) => {
     setExpandedTasks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
-  };
+  }, []);
 
-  const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-  };
+  const handleFilterChange = useCallback((e) => {
+    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setPage(1);
+  }, []);
 
-  const getSubtaskProgress = (subtasks) => {
+  const toggleSelect = useCallback((taskId) => {
+    setSelectedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedTasks.size === tasks.length) {
+      setSelectedTasks(new Set());
+    } else {
+      setSelectedTasks(new Set(tasks.map(t => t.id)));
+    }
+  }, [tasks, selectedTasks]);
+
+  const handleBulkAction = useCallback(async (action, value) => {
+    if (action === 'delete' && !confirm(`Delete ${selectedTasks.size} task(s) and all their subtasks?`)) return;
+    try {
+      const body = { action, task_ids: [...selectedTasks] };
+      if (action === 'status') body.status = value;
+      if (action === 'priority') body.priority = value;
+      if (action === 'assign') body.assigned_to = parseInt(value);
+      await api.post('/tasks/bulk', body);
+      setSelectedTasks(new Set());
+      loadTasks();
+    } catch (err) { showError(err.message || 'Bulk action failed'); }
+  }, [selectedTasks]);
+
+  const getSubtaskProgress = useCallback((subtasks) => {
     if (!subtasks || subtasks.length === 0) return null;
     const completed = subtasks.filter(s => s.status === 'completed').length;
     return { completed, total: subtasks.length };
-  };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -95,19 +174,68 @@ export default function TasksPage() {
           <h1 className="text-2xl font-bold text-slate-800">Tasks</h1>
           <p className="text-sm text-slate-500 mt-1">Manage tasks and subtasks for construction stages</p>
         </div>
-        {canCreate && (
-          <button
-            onClick={() => { setCreateParent(null); setShowCreate(true); }}
-            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <span>+</span> New Task
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* View toggle */}
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                viewMode === 'list' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+              title="List view"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('board')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                viewMode === 'board' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+              title="Kanban board"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('gantt')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                viewMode === 'gantt' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+              title="Gantt chart"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h7v4H3zM7 10h9v4H7zM5 16h6v4H5z" />
+              </svg>
+            </button>
+          </div>
+          {canCreate && (
+            <button
+              onClick={() => { setCreateParent(null); setShowCreate(true); }}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <span>+</span> New Task
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          {viewMode === 'list' && tasks.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={tasks.length > 0 && selectedTasks.size === tasks.length}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              Select all
+            </label>
+          )}
           <select name="stage_id" value={filters.stage_id} onChange={handleFilterChange}
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm">
             <option value="">All Stages</option>
@@ -135,25 +263,78 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Task list */}
+      {/* Task list / Kanban board */}
       {loading ? (
-        <div className="text-center py-12 text-slate-500">Loading tasks...</div>
+        viewMode === 'board' ? (
+          <div className="flex gap-3 overflow-x-auto pb-4">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="min-w-[260px] w-[260px] rounded-xl border border-slate-200 bg-slate-50/50">
+                <div className="bg-slate-300 animate-pulse rounded-t-xl h-9" />
+                <div className="p-2 space-y-2">
+                  {[1,2].map(j => <div key={j} className="bg-white rounded-lg h-24 animate-pulse" />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : viewMode === 'gantt' ? (
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="h-10 bg-slate-50 border-b border-slate-200 animate-pulse" />
+            <div className="flex">
+              <div className="w-[280px] border-r border-slate-200 space-y-1 p-3">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="h-8 bg-slate-100 rounded animate-pulse" />)}
+              </div>
+              <div className="flex-1 p-3 space-y-1">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className="h-8 flex items-center">
+                    <div className="bg-blue-100 rounded h-5 animate-pulse" style={{ width: `${30 + Math.random() * 50}%`, marginLeft: `${Math.random() * 20}%` }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : <SkeletonTable rows={8} />
       ) : tasks.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
           No tasks found
         </div>
+      ) : viewMode === 'board' ? (
+        <KanbanBoard
+          tasks={tasks}
+          onStatusChange={handleStatusChange}
+          onEdit={(task) => setEditTask(task)}
+          onAttach={(task) => { setAttachTab(undefined); setAttachTask(task); }}
+          canEdit={canEdit}
+          canChangeStatus={canChangeStatus && !isReadOnly}
+        />
+      ) : viewMode === 'gantt' ? (
+        <GanttChart
+          tasks={tasks}
+          stages={stages}
+          onEdit={(task) => setEditTask(task)}
+          onStatusChange={handleStatusChange}
+          canEdit={canEdit}
+          canChangeStatus={canChangeStatus && !isReadOnly}
+        />
       ) : (
         <div className="space-y-3">
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
           {tasks.map((task) => {
             const progress = getSubtaskProgress(task.subtasks);
             const isExpanded = expandedTasks[task.id];
 
             return (
-              <div key={task.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div key={task.id} className={`bg-white rounded-xl border overflow-hidden ${selectedTasks.has(task.id) ? 'border-blue-300 ring-1 ring-blue-200' : 'border-slate-200'}`}>
                 {/* Parent task row */}
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
+                      {/* Bulk select checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.has(task.id)}
+                        onChange={() => toggleSelect(task.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                      />
                       {/* Expand toggle */}
                       {task.subtasks?.length > 0 ? (
                         <button onClick={() => toggleExpand(task.id)}
@@ -333,6 +514,7 @@ export default function TasksPage() {
               </div>
             );
           })}
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
         </div>
       )}
 
@@ -359,6 +541,16 @@ export default function TasksPage() {
           taskTitle={attachTask.title}
           initialTab={attachTab}
           onClose={() => { setAttachTask(null); setAttachTab(undefined); loadTasks(); }}
+        />
+      )}
+
+      {selectedTasks.size > 0 && (
+        <BulkActionBar
+          selectedCount={selectedTasks.size}
+          entityType="task"
+          onAction={handleBulkAction}
+          onClear={() => setSelectedTasks(new Set())}
+          users={users}
         />
       )}
     </div>

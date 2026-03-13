@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
 import StatCard from '../components/ui/StatCard';
+import { showError, showWarning, showSuccess } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
-
-const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-700',
-  'Under Review': 'bg-amber-100 text-amber-700',
-  Approved: 'bg-green-100 text-green-700',
-  Superseded: 'bg-purple-100 text-purple-700',
-  Void: 'bg-slate-200 text-slate-500',
-};
+import Pagination from '../components/ui/Pagination';
+import FilePreviewModal from '../components/shared/FilePreviewModal';
+import { DOCUMENT_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 const STATUSES = ['Draft', 'Under Review', 'Approved', 'Superseded', 'Void'];
 const CATEGORIES = ['Structural', 'Architectural', 'MEP', 'Civil', 'Landscape', 'Interior', 'Safety', 'Specification', 'Report', 'Other'];
@@ -42,12 +40,16 @@ const CATEGORY_COLORS = {
 export default function DocumentsPage() {
   const { currentProject } = useProject();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ category: '', status: '' });
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
   const [stages, setStages] = useState([]);
 
   const canCreate = ['owner', 'pm', 'engineer'].includes(user?.role);
@@ -57,17 +59,23 @@ export default function DocumentsPage() {
   const loadData = () => {
     if (!currentProject?.id) return;
     const pid = currentProject.id;
-    const params = `project_id=${pid}${filter.category ? `&category=${filter.category}` : ''}${filter.status ? `&status=${filter.status}` : ''}`;
+    const params = `project_id=${pid}${filter.category ? `&category=${filter.category}` : ''}${filter.status ? `&status=${filter.status}` : ''}&page=${page}&limit=50`;
     Promise.all([
       api.get(`/documents?${params}`),
       api.get(`/documents/summary?project_id=${pid}`),
     ]).then(([docsData, summaryData]) => {
-      setDocuments(docsData);
+      if (docsData && docsData.data) {
+        setDocuments(docsData.data);
+        setPagination(docsData.pagination);
+      } else {
+        setDocuments(Array.isArray(docsData) ? docsData : []);
+        setPagination(null);
+      }
       setSummary(summaryData);
     }).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, [currentProject?.id, filter]);
+  useEffect(() => { loadData(); }, [currentProject?.id, filter, page]);
 
   useEffect(() => {
     if (!currentProject?.id) return;
@@ -79,7 +87,7 @@ export default function DocumentsPage() {
       await api.patch(`/documents/${doc.id}/status`, { status: newStatus });
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -89,7 +97,7 @@ export default function DocumentsPage() {
       await api.delete(`/documents/${doc.id}`);
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to delete document');
+      showError(err.message || 'Failed to delete document');
     }
   };
 
@@ -140,12 +148,12 @@ export default function DocumentsPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <select value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}
+        <select value={filter.category} onChange={e => { setFilter(f => ({ ...f, category: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
+        <select value={filter.status} onChange={e => { setFilter(f => ({ ...f, status: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -154,11 +162,12 @@ export default function DocumentsPage() {
 
       {/* Documents List */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400 text-sm">Loading documents...</div>
+        <SkeletonTable rows={6} />
       ) : documents.length === 0 ? (
         <div className="text-center py-12 text-slate-400 text-sm">No documents found</div>
       ) : (
         <div className="space-y-3">
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
           {documents.map(doc => (
             <div key={doc.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-start justify-between gap-3">
@@ -185,9 +194,43 @@ export default function DocumentsPage() {
                     {doc.revision_date && <span>Rev: {formatDate(doc.revision_date)}</span>}
                     {doc.uploaded_by_name && <span>By: {doc.uploaded_by_name}</span>}
                     {doc.approved_by_name && <span className="text-green-600">Approved by: {doc.approved_by_name}</span>}
+                    {doc.file_name ? (
+                      <span className="text-blue-500 flex items-center gap-0.5">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        {doc.original_name}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300 italic">No file</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  {doc.file_name && doc.mime_type?.startsWith('image/') && (
+                    <button
+                      onClick={() => navigate(`/documents/${doc.id}/viewer`)}
+                      title="Open in Drawing Viewer with pins"
+                      className="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+                  )}
+                  {doc.file_name && (
+                    <button
+                      onClick={() => setPreviewDoc(doc)}
+                      title="Preview file"
+                      className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                  )}
                   {canChangeStatus && doc.status !== 'Void' && (
                     <select
                       value={doc.status}
@@ -207,6 +250,7 @@ export default function DocumentsPage() {
               </div>
             </div>
           ))}
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
         </div>
       )}
 
@@ -218,13 +262,31 @@ export default function DocumentsPage() {
           stages={stages}
           onClose={() => { setShowModal(false); setSelectedDoc(null); }}
           onSaved={() => { setShowModal(false); setSelectedDoc(null); loadData(); }}
+          onPreview={(doc) => { setShowModal(false); setSelectedDoc(null); setPreviewDoc(doc); }}
+        />
+      )}
+
+      {/* File Preview Modal */}
+      {previewDoc && previewDoc.file_name && (
+        <FilePreviewModal
+          attachment={{
+            id: previewDoc.id,
+            original_name: previewDoc.original_name,
+            mime_type: previewDoc.mime_type,
+            file_size: previewDoc.file_size,
+            uploaded_by_name: previewDoc.uploaded_by_name,
+            uploaded_at: previewDoc.updated_at,
+            // Use document file endpoints instead of task attachment endpoints
+            _isDocument: true,
+          }}
+          onClose={() => setPreviewDoc(null)}
         />
       )}
     </div>
   );
 }
 
-function DocumentModal({ doc, projectId, stages, onClose, onSaved }) {
+function DocumentModal({ doc, projectId, stages, onClose, onSaved, onPreview }) {
   const isEdit = !!doc;
   const [form, setForm] = useState({
     title: doc?.title || '',
@@ -236,13 +298,30 @@ function DocumentModal({ doc, projectId, stages, onClose, onSaved }) {
     description: doc?.description || '',
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [currentFile, setCurrentFile] = useState(doc?.original_name || null);
   const [showRevise, setShowRevise] = useState(false);
   const [newRevision, setNewRevision] = useState('');
   const [newRevisionDate, setNewRevisionDate] = useState('');
   const [revisionDescription, setRevisionDescription] = useState('');
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !isEdit) return;
+    setUploading(true);
+    try {
+      await api.upload(`/documents/${doc.id}/upload`, [file]);
+      setCurrentFile(file.name);
+      showSuccess('File uploaded successfully');
+    } catch (err) {
+      showError(err.message || 'File upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (!form.title.trim()) return alert('Title is required');
+    if (!form.title.trim()) return showWarning('Title is required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -252,14 +331,14 @@ function DocumentModal({ doc, projectId, stages, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save document');
+      showError(err.message || 'Failed to save document');
     } finally {
       setSaving(false);
     }
   };
 
   const handleRevise = async () => {
-    if (!newRevision.trim()) return alert('Revision number is required');
+    if (!newRevision.trim()) return showWarning('Revision number is required');
     setSaving(true);
     try {
       await api.patch(`/documents/${doc.id}/revise`, {
@@ -269,7 +348,7 @@ function DocumentModal({ doc, projectId, stages, onClose, onSaved }) {
       });
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to create revision');
+      showError(err.message || 'Failed to create revision');
     } finally {
       setSaving(false);
     }
@@ -344,6 +423,40 @@ function DocumentModal({ doc, projectId, stages, onClose, onSaved }) {
               rows={3} className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1"
               placeholder="Document description, scope, or notes" />
           </div>
+
+          {/* File Upload Section (edit mode only) */}
+          {isEdit && (
+            <div className="border-t pt-4 mt-2">
+              <label className="text-xs text-slate-500 font-medium">Attached File</label>
+              <div className="mt-1.5 flex items-center gap-3">
+                {currentFile ? (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    <span className="text-sm text-slate-700 truncate">{currentFile}</span>
+                    {doc.file_name && (
+                      <button
+                        onClick={() => onPreview({ ...doc, original_name: currentFile })}
+                        className="text-xs text-blue-600 hover:text-blue-800 flex-shrink-0"
+                      >
+                        Preview
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-400 italic">No file attached</span>
+                )}
+                <label className={`px-3 py-1.5 text-xs rounded-lg cursor-pointer flex-shrink-0 ${
+                  uploading ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}>
+                  {uploading ? 'Uploading...' : currentFile ? 'Replace File' : 'Upload File'}
+                  <input type="file" onChange={handleFileUpload} className="hidden" disabled={uploading}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt,.csv,.dwg,.dxf,.skp,.3ds,.rvt,.jpg,.jpeg,.png,.gif,.webp" />
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* New Revision Section (edit mode only) */}
           {isEdit && (

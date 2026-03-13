@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { formatCurrency } from '../utils/formatters';
+import { showError, showWarning } from '../utils/toast';
 
 const CATEGORY_META = {
   material: {
@@ -158,7 +159,7 @@ export default function RatesMasterPage() {
       setEditForm({});
       loadRates();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -170,7 +171,7 @@ export default function RatesMasterPage() {
       await api.delete(`/estimator/rates/${item.id}`);
       loadRates();
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      showError(err.message || 'Failed to delete');
     }
   };
 
@@ -185,7 +186,7 @@ export default function RatesMasterPage() {
 
   const saveAdd = async () => {
     if (!addForm.item_key || !addForm.label) {
-      alert('Key and Label are required');
+      showWarning('Key and Label are required');
       return;
     }
     setSaving(true);
@@ -204,7 +205,7 @@ export default function RatesMasterPage() {
       setShowAdd(false);
       loadRates();
     } catch (err) {
-      alert(err.message || 'Failed to create');
+      showError(err.message || 'Failed to create');
     } finally {
       setSaving(false);
     }

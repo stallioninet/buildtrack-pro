@@ -4,16 +4,8 @@ import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import Badge from '../components/ui/Badge';
 import { formatCurrency, formatDate } from '../utils/formatters';
-
-const STATUSES = ['Draft', 'Pending Approval', 'Approved', 'Paid', 'Cancelled'];
-
-const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-700',
-  'Pending Approval': 'bg-amber-100 text-amber-700',
-  Approved: 'bg-blue-100 text-blue-700',
-  Paid: 'bg-green-100 text-green-700',
-  Cancelled: 'bg-red-100 text-red-700',
-};
+import { showError, showWarning } from '../utils/toast';
+import { PAYMENT_STATUSES as STATUSES, PAYMENT_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
 
 export default function PaymentsPage() {
   const { currentProject } = useProject();
@@ -54,7 +46,7 @@ export default function PaymentsPage() {
       await api.patch(`/payments/${payment.id}/status`, { status: newStatus });
       loadPayments();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -64,7 +56,7 @@ export default function PaymentsPage() {
       await api.delete(`/payments/${payment.id}`);
       loadPayments();
     } catch (err) {
-      alert(err.message || 'Failed to delete payment');
+      showError(err.message || 'Failed to delete payment');
     }
   };
 
@@ -89,7 +81,7 @@ export default function PaymentsPage() {
       setEditingPayment(null);
       loadPayments();
     } catch (err) {
-      alert(err.message || 'Failed to save payment');
+      showError(err.message || 'Failed to save payment');
     }
   };
 
@@ -228,7 +220,7 @@ function PaymentModal({ payment, vendors, stages, onSave, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.vendor_id || !form.amount) {
-      alert('Vendor and amount are required');
+      showWarning('Vendor and amount are required');
       return;
     }
     onSave({

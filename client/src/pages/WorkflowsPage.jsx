@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
+import { showError, showWarning } from '../utils/toast';
 
 const CATEGORY_META = {
   project: { label: 'Project Management', icon: '📋', desc: 'Core project, stage, and task lifecycle workflows', activeClass: 'bg-blue-600 text-white', inactiveClass: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
@@ -476,7 +477,7 @@ function WorkflowDesigner({ workflows, user, onRefresh }) {
       setShowEditor(false);
       onRefresh();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     }
   };
 
@@ -486,7 +487,7 @@ function WorkflowDesigner({ workflows, user, onRefresh }) {
       await api.delete(`/workflows/${wf.key}`);
       onRefresh();
       if (selected?.key === wf.key) setSelected(null);
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   return (
@@ -702,7 +703,7 @@ function WorkflowEditorModal({ workflow, isNew, onClose, onSave }) {
 
   const handleSave = async () => {
     if (!form.machine_key || !form.name || !form.entity || form.states.length === 0) {
-      return alert('Key, name, entity, and at least one state are required');
+      return showWarning('Key, name, entity, and at least one state are required');
     }
     setSaving(true);
     try { await onSave(form); } finally { setSaving(false); }

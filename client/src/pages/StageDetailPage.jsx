@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/client';
+import { showError } from '../utils/toast';
 import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
 import Badge from '../components/ui/Badge';
@@ -10,12 +11,7 @@ import TaskCreateModal from '../components/shared/TaskCreateModal';
 import TaskEditModal from '../components/shared/TaskEditModal';
 import TaskAttachments from '../components/shared/TaskAttachments';
 import { formatCurrency, formatDate } from '../utils/formatters';
-
-const PRIORITY_COLORS = {
-  high: 'bg-red-100 text-red-700',
-  medium: 'bg-yellow-100 text-yellow-700',
-  low: 'bg-slate-100 text-slate-600',
-};
+import { PRIORITY_COLORS } from '../config/constants';
 
 const GATE_INDICATORS = {
   blocked: { icon: '!', color: 'bg-red-500 text-white', title: 'Blocked: linked inspection failed' },
@@ -63,7 +59,7 @@ export default function StageDetailPage() {
     } catch (err) {
       // Show gating error with blocker details
       const msg = err.message || 'Failed to update task status';
-      alert(msg);
+      showError(msg);
     }
   };
 
@@ -82,7 +78,7 @@ export default function StageDetailPage() {
       setTaskInspections(prev => ({ ...prev, [taskId]: prev[taskId]?.filter(i => i.link_id !== linkId) }));
       reload();
     } catch (err) {
-      alert(err.message || 'Failed to unlink');
+      showError(err.message || 'Failed to unlink');
     }
   };
 
@@ -92,7 +88,7 @@ export default function StageDetailPage() {
       await api.delete(`/tasks/${taskId}`);
       reload();
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      showError(err.message || 'Failed to delete');
     }
   };
 
@@ -526,7 +522,7 @@ function LinkInspectionModal({ task, projectId, existingLinks, onClose, onLinked
       });
       onLinked();
     } catch (err) {
-      alert(err.message || 'Failed to link inspection');
+      showError(err.message || 'Failed to link inspection');
     } finally {
       setSubmitting(false);
     }

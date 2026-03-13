@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import db from '../config/db.js';
 import { requireAuth, getUserProjectIds } from '../middleware/auth.js';
+import { validate, changeOrderSchema } from '../middleware/validate.js';
+import { generateNextCode } from '../services/codeGenerator.js';
 
 const router = Router();
 
@@ -9,24 +11,32 @@ const VALID_TYPES = ['scope_change', 'design_change', 'site_condition', 'client_
 
 router.get('/', requireAuth, (req, res) => {
   const { project_id, status } = req.query;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+  const offset = (page - 1) * limit;
+
   const projectIds = project_id ? [project_id] : getUserProjectIds(req.user.id, req.user.role);
-  if (projectIds.length === 0) return res.json([]);
+  if (projectIds.length === 0) return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
   const ph = projectIds.map(() => '?').join(',');
 
-  let sql = `
+  let whereClause = `WHERE co.project_id IN (${ph})`;
+  const params = [...projectIds];
+  if (status) { whereClause += ' AND co.status = ?'; params.push(status); }
+
+  const countSql = `SELECT COUNT(*) as total FROM change_orders co ${whereClause}`;
+  const { total } = db.prepare(countSql).get(...params);
+
+  const sql = `
     SELECT co.*, s.name as stage_name,
     u1.name as requested_by_name, u2.name as approved_by_name
     FROM change_orders co
     LEFT JOIN stages s ON co.stage_id = s.id
     LEFT JOIN users u1 ON co.requested_by = u1.id
     LEFT JOIN users u2 ON co.approved_by = u2.id
-    WHERE co.project_id IN (${ph})
-  `;
-  const params = [...projectIds];
-  if (status) { sql += ' AND co.status = ?'; params.push(status); }
-  sql += ' ORDER BY co.id DESC';
+    ${whereClause} ORDER BY co.id DESC LIMIT ? OFFSET ?`;
 
-  res.json(db.prepare(sql).all(...params));
+  const data = db.prepare(sql).all(...params, limit, offset);
+  res.json({ data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 
 router.get('/summary', requireAuth, (req, res) => {
@@ -56,15 +66,14 @@ router.get('/:id', requireAuth, (req, res) => {
   res.json(co);
 });
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, validate(changeOrderSchema), (req, res) => {
   if (!['owner', 'pm', 'engineer'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Not authorized' });
   }
-  const { project_id, stage_id, title, description, reason, type, cost_impact, schedule_impact_days, due_date } = req.body;
+  const { project_id, stage_id, title, description, reason, type, cost_impact, schedule_impact_days, due_date } = req.validated;
   if (!title || !project_id) return res.status(400).json({ error: 'Title and project are required' });
 
-  const count = db.prepare('SELECT COUNT(*) as c FROM change_orders').get().c;
-  const co_code = `CO-${String(count + 1).padStart(3, '0')}`;
+  const co_code = generateNextCode('change_orders', 'co_code', 'CO');
 
   const result = db.prepare(`
     INSERT INTO change_orders (co_code, project_id, stage_id, title, description, reason, type, cost_impact, schedule_impact_days, status, requested_by, due_date)

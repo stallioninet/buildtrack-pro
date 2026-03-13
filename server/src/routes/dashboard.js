@@ -25,7 +25,54 @@ router.get('/', requireAuth, (req, res) => {
       p.memberCount = memberCountStmt.get(p.id)?.c || 0;
     }
 
+    // Aggregate stats across all projects
+    const projectIds = projects.map(p => p.id);
+    const ph = projectIds.length > 0 ? projectIds.map(() => '?').join(',') : '0';
+    const pParams = projectIds.length > 0 ? projectIds : [0];
+
+    const totalInvestment = projects.reduce((s, p) => s + (p.total_budget || 0), 0);
+    const totalSpent = projects.reduce((s, p) => s + (p.spent || 0), 0);
+    const avgCompletion = projects.length > 0 ? Math.round(projects.reduce((s, p) => s + (p.completion || 0), 0) / projects.length) : 0;
+
+    const pendingChangeOrders = db.prepare(`SELECT COUNT(*) as c FROM change_orders WHERE status IN ('Submitted','Under Review') AND project_id IN (${ph})`).get(...pParams).c;
+    const pendingRaBills = db.prepare(`SELECT COUNT(*) as c FROM ra_bills WHERE status IN ('Submitted','Under Review','Verified') AND project_id IN (${ph})`).get(...pParams).c;
+
+    // Recent activity across all projects
+    const recentActivity = db.prepare(`SELECT * FROM audit_log WHERE project_id IN (${ph}) ORDER BY timestamp DESC LIMIT 8`).all(...pParams);
+
+    // Pending approvals breakdown
+    const allStageIds = db.prepare(`SELECT id FROM stages WHERE project_id IN (${ph})`).all(...pParams).map(s => s.id);
+    const sph = allStageIds.length > 0 ? allStageIds.map(() => '?').join(',') : '0';
+    const sParams = allStageIds.length > 0 ? allStageIds : [0];
+
+    const pendingExpenses = db.prepare(`SELECT COUNT(*) as c FROM expenses WHERE status = 'Pending Approval' AND stage_id IN (${sph})`).get(...sParams).c;
+    const pendingPayments = db.prepare(`SELECT COUNT(*) as c FROM payments WHERE status = 'Pending Approval' AND stage_id IN (${sph})`).get(...sParams).c;
+
+    // Key documents needing review
+    const pendingDocs = db.prepare(`SELECT id, doc_code, title, category, status, updated_at FROM documents WHERE status IN ('Draft','Under Review') AND project_id IN (${ph}) ORDER BY updated_at DESC LIMIT 5`).all(...pParams);
+
+    // Open NCRs/RFIs
+    const openNCRs = db.prepare(`SELECT COUNT(*) as c FROM ncrs WHERE status NOT IN ('Closed','Void') AND project_id IN (${ph})`).get(...pParams).c;
+    const openRFIs = db.prepare(`SELECT COUNT(*) as c FROM rfis WHERE status NOT IN ('Closed','Void') AND project_id IN (${ph})`).get(...pParams).c;
+    const openPunchItems = db.prepare(`SELECT COUNT(*) as c FROM punch_items WHERE status NOT IN ('closed','void') AND project_id IN (${ph})`).get(...pParams).c;
+
     data.projects = projects;
+    data.portalStats = {
+      totalInvestment,
+      totalSpent,
+      avgCompletion,
+      activeProjects: projects.filter(p => p.status === 'active').length,
+      pendingApprovals: pendingChangeOrders + pendingRaBills + pendingExpenses + pendingPayments,
+      pendingChangeOrders,
+      pendingRaBills,
+      pendingExpenses,
+      pendingPayments,
+      openNCRs,
+      openRFIs,
+      openPunchItems,
+    };
+    data.recentActivity = recentActivity;
+    data.pendingDocs = pendingDocs;
     return res.json(data);
   }
 
@@ -79,7 +126,29 @@ router.get('/', requireAuth, (req, res) => {
         ? db.prepare(`SELECT COUNT(*) as c FROM defects WHERE status = 'Open' AND inspection_id IN (SELECT id FROM inspections WHERE stage_id IN (${stageIdsPh}))`).get(...stageIds).c
         : 0,
     };
-    data.recentAudit = db.prepare(`SELECT * FROM audit_log WHERE project_id = ? OR project_id IS NULL ORDER BY timestamp DESC LIMIT 5`).all(project.id);
+    data.recentAudit = db.prepare(`SELECT * FROM audit_log WHERE project_id = ? ORDER BY timestamp DESC LIMIT 8`).all(project.id);
+
+    // Milestones: stages with their completion/dates
+    data.milestones = stages.map(s => ({
+      id: s.id, name: s.name, order: s.stage_order, status: s.status,
+      completion: s.completion, start_date: s.start_date, end_date: s.end_date,
+    }));
+
+    // Change orders pending approval
+    data.pendingChangeOrders = db.prepare(`SELECT id, co_code, title, cost_impact, status, created_at FROM change_orders WHERE status IN ('Submitted','Under Review') AND project_id = ? ORDER BY created_at DESC`).all(project.id);
+
+    // RA Bills pending
+    data.pendingRaBills = db.prepare(`SELECT id, bill_code, title, net_payable, status, created_at FROM ra_bills WHERE status IN ('Submitted','Under Review','Verified') AND project_id = ? ORDER BY created_at DESC`).all(project.id);
+
+    // Key documents
+    data.keyDocuments = db.prepare(`SELECT id, doc_code, title, category, revision, status, updated_at FROM documents WHERE project_id = ? ORDER BY updated_at DESC LIMIT 8`).all(project.id);
+
+    // Quality summary
+    data.qualitySummary = {
+      openNCRs: db.prepare(`SELECT COUNT(*) as c FROM ncrs WHERE status NOT IN ('Closed','Void') AND project_id = ?`).get(project.id).c,
+      openRFIs: db.prepare(`SELECT COUNT(*) as c FROM rfis WHERE status NOT IN ('Closed','Void') AND project_id = ?`).get(project.id).c,
+      openPunchItems: db.prepare(`SELECT COUNT(*) as c FROM punch_items WHERE status NOT IN ('closed','void') AND project_id = ?`).get(project.id).c,
+    };
   }
 
   if (role === 'pm') {
@@ -239,6 +308,43 @@ router.get('/', requireAuth, (req, res) => {
   }
 
   res.json(data);
+});
+
+// GET /api/dashboard/layout — get user's dashboard layout
+router.get('/layout', requireAuth, (req, res) => {
+  const row = db.prepare('SELECT layout FROM dashboard_layouts WHERE user_id = ?').get(req.user.id);
+  if (!row) return res.json({ layout: null });
+
+  try {
+    res.json({ layout: JSON.parse(row.layout) });
+  } catch {
+    res.json({ layout: null });
+  }
+});
+
+// PUT /api/dashboard/layout — save user's dashboard layout
+router.put('/layout', requireAuth, (req, res) => {
+  const { layout } = req.body;
+  if (!layout || !Array.isArray(layout)) {
+    return res.status(400).json({ error: 'layout must be an array of widget configs' });
+  }
+
+  const layoutJson = JSON.stringify(layout);
+  const existing = db.prepare('SELECT id FROM dashboard_layouts WHERE user_id = ?').get(req.user.id);
+
+  if (existing) {
+    db.prepare("UPDATE dashboard_layouts SET layout = ?, updated_at = datetime('now') WHERE user_id = ?").run(layoutJson, req.user.id);
+  } else {
+    db.prepare('INSERT INTO dashboard_layouts (user_id, layout) VALUES (?, ?)').run(req.user.id, layoutJson);
+  }
+
+  res.json({ success: true });
+});
+
+// DELETE /api/dashboard/layout — reset to default
+router.delete('/layout', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM dashboard_layouts WHERE user_id = ?').run(req.user.id);
+  res.json({ success: true });
 });
 
 export default router;

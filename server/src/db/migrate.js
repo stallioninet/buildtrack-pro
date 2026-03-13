@@ -69,10 +69,10 @@ db.prepare('INSERT INTO users (email, password_hash, name, role_id, owner_type) 
 
 // ===== PROJECTS =====
 console.log('Seeding projects...');
-const insertProject = db.prepare('INSERT INTO projects (name, location, plot_size, start_date, planned_end, status, total_budget, spent, completion, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-insertProject.run('Kumar Villa Project', 'Whitefield, Bangalore', '2400 sqft', '2025-09-01', '2026-08-30', 'active', 8500000, 3420000, 38, 1);
-insertProject.run('Sharma Duplex', 'Koramangala, Bangalore', '1800 sqft', '2026-01-15', '2026-12-30', 'active', 6200000, 450000, 12, 1);
-insertProject.run('Patel Farmhouse', 'Devanahalli, Bangalore', '4000 sqft', '2026-04-01', '2027-06-30', 'planning', 15000000, 0, 0, 1);
+const insertProject = db.prepare('INSERT INTO projects (name, location, plot_size, start_date, planned_end, status, total_budget, spent, completion, latitude, longitude, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+insertProject.run('Kumar Villa Project', 'Whitefield, Bangalore', '2400 sqft', '2025-09-01', '2026-08-30', 'active', 8500000, 3420000, 38, 12.9698, 77.7500, 1);
+insertProject.run('Sharma Duplex', 'Koramangala, Bangalore', '1800 sqft', '2026-01-15', '2026-12-30', 'active', 6200000, 450000, 12, 12.9352, 77.6245, 1);
+insertProject.run('Patel Farmhouse', 'Devanahalli, Bangalore', '4000 sqft', '2026-04-01', '2027-06-30', 'planning', 15000000, 0, 0, 13.2487, 77.7083, 1);
 
 // ===== STAGES =====
 console.log('Seeding stages...');
@@ -1379,6 +1379,20 @@ if (engUser && stage4) {
 }
 console.log('  Inserted 3 sample RFIs');
 
+// ===== PUNCH ITEMS =====
+console.log('Seeding punch items...');
+const insertPunch = db.prepare("INSERT INTO punch_items (punch_code, project_id, stage_id, title, description, location, category, priority, status, assigned_to, due_date, created_by, closed_by, closed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+
+insertPunch.run('PUN-001', 1, stage4.id, 'Crack in plaster above window W2', 'Horizontal hairline crack observed in plaster above window W2 on the first floor. Appears to be a shrinkage crack, approximately 600mm long.', '1st Floor, Room 3, Window W2', 'Finishing', 'medium', 'open', contUser?.id || null, '2026-03-20', engUser.id, null, null);
+insertPunch.run('PUN-002', 1, stage4.id, 'Uneven floor tile alignment in bathroom', 'Floor tiles in master bathroom have 2-3mm lippage at joints near the shower area. Does not meet specification of max 1mm lippage.', 'Ground Floor, Master Bathroom', 'Finishing', 'high', 'in_progress', contUser?.id || null, '2026-03-18', inspUser.id, null, null);
+insertPunch.run('PUN-003', 1, stage4.id, 'Missing electrical outlet cover plate', 'Cover plate missing on double socket outlet near kitchen counter. Wiring exposed and poses safety risk.', '1st Floor, Kitchen, East Wall', 'Electrical', 'critical', 'open', contUser?.id || null, '2026-03-15', inspUser.id, null, null);
+insertPunch.run('PUN-004', 1, stage4.id, 'Water stain on ceiling below 2nd floor bathroom', 'Brown water stain (approx 300x200mm) on 1st floor bedroom ceiling directly below 2nd floor bathroom. Indicates possible waterproofing failure or pipe leak.', '1st Floor, Bedroom 2, Ceiling', 'Plumbing', 'critical', 'open', contUser?.id || null, '2026-03-14', engUser.id, null, null);
+insertPunch.run('PUN-005', 1, stage4.id, 'Door frame not plumb - bedroom 3', 'Door frame for D5 is 8mm out of plumb over 2100mm height. Door binds when closing. Frame needs shimming and re-fixing.', '2nd Floor, Bedroom 3, Door D5', 'General', 'medium', 'ready_for_review', contUser?.id || null, '2026-03-22', engUser.id, null, null);
+insertPunch.run('PUN-006', 1, stage4.id, 'Paint touch-up needed on staircase wall', 'Scuff marks and minor paint damage on staircase wall between ground and first floor from material handling during construction.', 'Staircase, Ground to 1st Floor', 'Painting', 'low', 'closed', contUser?.id || null, '2026-03-10', inspUser.id, 2, '2026-03-11 14:00:00');
+insertPunch.run('PUN-007', 1, stage4.id, 'HVAC duct insulation gap at junction', 'Gap in fiberglass insulation wrap at the T-junction of AC duct near living room. Condensation dripping observed.', '1st Floor, Living Room, Above False Ceiling', 'HVAC', 'high', 'in_progress', contUser?.id || null, '2026-03-19', engUser.id, null, null);
+insertPunch.run('PUN-008', 1, stage4.id, 'Grout missing between kitchen backsplash tiles', 'Three sections of grout missing between wall tiles on kitchen backsplash. Each gap approximately 100mm long.', 'Ground Floor, Kitchen, Backsplash', 'Finishing', 'low', 'open', contUser?.id || null, '2026-03-25', inspUser.id, null, null);
+console.log('  Inserted 8 sample punch items');
+
 // ===== ESTIMATOR MASTER RATES =====
 console.log('Seeding estimator master rates...');
 const insertRate = db.prepare('INSERT INTO estimator_rates (category, item_key, label, value_json, sort_order) VALUES (?, ?, ?, ?, ?)');
@@ -1627,6 +1641,83 @@ const m5 = insertMeeting.run('MOM-005', 1, 'Coordination Meeting - MEP Services'
 const m6 = insertMeeting.run('MOM-006', 2, 'Sharma Duplex - Project Kickoff', 'kickoff', '2026-03-01', '10:00', '12:00', 'Client Office', 'Rajesh Sharma, Ramesh K., MK Construction', '1. Project scope and timeline review\n2. Team roles and responsibilities\n3. Communication plan\n4. Safety requirements\n5. Quality standards and inspection plan', '1. Foundation work started on schedule. Target completion: April 15.\n2. Team deployed: 1 site engineer, 1 supervisor, 8 masons, 12 laborers.\n3. Weekly progress meetings on Fridays at 3 PM.\n4. Same safety standards as Kumar Villa project.\n5. Hold point inspections at PCC, footing, and plinth beam stages.', '1. Weekly progress reports to be submitted by Friday 5 PM\n2. Material indent to be raised 7 days in advance\n3. First hold point inspection: PCC completion (expected March 10)', 'Completed', 2).lastInsertRowid;
 insertAction.run(m6, 'Submit project quality plan for Sharma Duplex', 2, '2026-03-08', 'completed', '2026-03-07 16:00:00');
 insertAction.run(m6, 'Arrange soil testing at foundation location', 3, '2026-03-05', 'completed', '2026-03-04 10:00:00');
+
+// ===== RESOURCES =====
+console.log('Seeding resources...');
+const insertResource = db.prepare('INSERT INTO resources (resource_code, project_id, type, name, unit, rate, available_qty, status, created_by) VALUES (?,?,?,?,?,?,?,?,?)');
+insertResource.run('RES-001', 1, 'labor', 'Mason Team A', 'days', 1200, 180, 'active', 2);
+insertResource.run('RES-002', 1, 'labor', 'Carpenter Team', 'days', 1000, 120, 'active', 2);
+insertResource.run('RES-003', 1, 'labor', 'Electrician Team', 'days', 1500, 60, 'active', 2);
+insertResource.run('RES-004', 1, 'labor', 'Plumber Team', 'days', 1400, 45, 'active', 2);
+insertResource.run('RES-005', 1, 'equipment', 'Mobile Crane (10T)', 'days', 8000, 30, 'active', 2);
+insertResource.run('RES-006', 1, 'equipment', 'Concrete Mixer', 'days', 2500, 90, 'active', 2);
+insertResource.run('RES-007', 1, 'equipment', 'Bar Bending Machine', 'days', 1800, 60, 'active', 2);
+insertResource.run('RES-008', 1, 'material', 'OPC Cement 53 Grade', 'bags', 380, 500, 'active', 2);
+insertResource.run('RES-009', 1, 'material', 'TMT Steel Fe500D', 'kg', 65, 2000, 'active', 2);
+insertResource.run('RES-010', 1, 'material', 'M-Sand (Zone II)', 'cum', 1800, 50, 'active', 2);
+insertResource.run('RES-011', 2, 'labor', 'Mason Team B', 'days', 1100, 90, 'active', 2);
+insertResource.run('RES-012', 2, 'equipment', 'JCB Excavator', 'days', 6000, 15, 'active', 2);
+
+const insertResAssign = db.prepare('INSERT INTO resource_assignments (resource_id, task_id, planned_qty, actual_qty, date, notes) VALUES (?,?,?,?,?,?)');
+// Assign Mason Team A to structure tasks
+insertResAssign.run(1, 1, 20, 18, '2026-02-15', 'Foundation masonry work');
+insertResAssign.run(1, 2, 30, 25, '2026-02-20', 'Plinth beam work');
+insertResAssign.run(5, 1, 5, 4, '2026-02-15', 'Crane for steel lifting');
+insertResAssign.run(6, 2, 15, 12, '2026-02-18', 'Concrete mixing for plinth');
+insertResAssign.run(8, 1, 200, 185, '2026-02-15', 'Cement for foundation stage');
+insertResAssign.run(9, 1, 800, 750, '2026-02-15', 'Steel for foundation reinforcement');
+console.log('  Inserted 12 resources with 6 assignments');
+
+// ===== BID PACKAGES =====
+console.log('Seeding bid packages...');
+const insertBid = db.prepare("INSERT INTO bid_packages (bid_code, project_id, title, description, trade, scope_of_work, budget_estimate, bid_due_date, status, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?, datetime('now'))");
+const b1 = insertBid.run('BID-001', 1, 'Electrical Wiring & Fixtures', 'Complete electrical work for all floors including wiring, DB boards, switches, sockets, and light fixtures.', 'Electrical', 'Supply and installation of all electrical wiring (concealed), distribution boards, MCBs, switches, sockets, ceiling fans, and LED fixtures for 3 floors.', 450000, '2026-03-20', 'Open', 2).lastInsertRowid;
+const b2 = insertBid.run('BID-002', 1, 'Plumbing & Sanitary Work', 'All internal and external plumbing including water supply, drainage, and sanitary fittings.', 'Plumbing', 'Supply and installation of CPVC water supply piping, PVC drainage, bathroom fittings (CP), water heater points, and external drainage connection.', 380000, '2026-03-22', 'Open', 2).lastInsertRowid;
+const b3 = insertBid.run('BID-003', 1, 'Interior Painting', 'Complete interior and exterior painting with primer, putty, and final coats.', 'Painting', 'Asian Paints or equivalent — 2 coats putty, 1 coat primer, 2 coats emulsion for interior; 1 coat primer + 2 coats Apex for exterior.', 280000, '2026-04-01', 'Draft', 2).lastInsertRowid;
+const b4 = insertBid.run('BID-004', 1, 'Flooring & Tiling', 'Vitrified tile flooring for all rooms, ceramic tiles for bathrooms and kitchen.', 'Flooring', 'Supply and laying of 600x600 vitrified tiles in living/bedrooms, 300x300 anti-skid ceramic tiles in wet areas, skirting, and threshold.', 520000, '2026-03-15', 'Awarded', 2).lastInsertRowid;
+
+const insertBidResp = db.prepare("INSERT INTO bid_responses (bid_package_id, vendor_id, amount, notes, score, is_selected, submitted_at) VALUES (?,?,?,?,?,?, datetime('now'))");
+insertBidResp.run(b1, 1, 420000, 'Can start within 1 week of award. 6-month warranty on all work.', 78, 0);
+insertBidResp.run(b1, 2, 465000, 'Premium Havells wiring and Anchor switches included. 1-year warranty.', 82, 0);
+insertBidResp.run(b2, 1, 360000, 'Astral CPVC pipes. Jaquar CP fittings.', 75, 0);
+insertBidResp.run(b2, 3, 395000, 'Supreme CPVC + Kohler fittings. 2-year warranty.', 85, 0);
+insertBidResp.run(b4, 1, 490000, 'Kajaria vitrified, Somany wall tiles. Can start immediately.', 80, 0);
+insertBidResp.run(b4, 2, 535000, 'RAK Ceramics throughout. Premium finish.', 72, 0);
+insertBidResp.run(b4, 3, 510000, 'Nitco vitrified + Johnson anti-skid. Best quality.', 88, 1);
+// Award BID-004
+db.prepare("UPDATE bid_packages SET awarded_to=3, awarded_amount=510000, awarded_at=datetime('now') WHERE id=?").run(b4);
+console.log('  Inserted 4 bid packages with 7 responses');
+
+// ===== SCHEDULE OF VALUES =====
+console.log('Seeding schedule of values...');
+const insertSOV = db.prepare("INSERT INTO sov_line_items (project_id, stage_id, cost_code, description, trade, scheduled_value, previous_billed, current_billed, stored_materials, percent_complete, retainage_percent, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+insertSOV.run(1, 1, '01-100', 'General Conditions & Site Setup', 'General Conditions', 150000, 150000, 0, 0, 100, 5, 1);
+insertSOV.run(1, 1, '02-100', 'Earthwork & Excavation', 'Site Work', 280000, 280000, 0, 0, 100, 5, 2);
+insertSOV.run(1, 3, '03-100', 'Foundation Concrete (PCC + RCC)', 'Concrete', 650000, 450000, 120000, 0, 87.7, 5, 3);
+insertSOV.run(1, 3, '03-200', 'Plinth Beam & Columns', 'Concrete', 480000, 200000, 180000, 0, 79.2, 5, 4);
+insertSOV.run(1, 4, '03-300', 'Superstructure RCC (Slabs, Beams)', 'Concrete', 850000, 0, 250000, 50000, 35.3, 5, 5);
+insertSOV.run(1, 4, '04-100', 'Brick Masonry Walls', 'Masonry', 420000, 0, 80000, 30000, 26.2, 5, 6);
+insertSOV.run(1, 5, '05-100', 'Steel Reinforcement', 'Metals', 380000, 200000, 100000, 20000, 84.2, 5, 7);
+insertSOV.run(1, null, '09-100', 'Interior Plastering & Finishing', 'Finishes', 350000, 0, 0, 0, 0, 5, 8);
+insertSOV.run(1, null, '15-100', 'Plumbing & Sanitary', 'Mechanical', 380000, 0, 0, 0, 0, 5, 9);
+insertSOV.run(1, null, '16-100', 'Electrical Work', 'Electrical', 450000, 0, 0, 0, 0, 5, 10);
+insertSOV.run(1, null, '09-200', 'Flooring & Tiling', 'Finishes', 520000, 0, 0, 0, 0, 5, 11);
+insertSOV.run(1, null, '09-300', 'Painting (Interior + Exterior)', 'Finishes', 280000, 0, 0, 0, 0, 5, 12);
+console.log('  Inserted 12 SOV line items');
+
+// ===== MEETING ATTENDEES =====
+console.log('Seeding meeting attendees...');
+const insertAttendee = db.prepare('INSERT INTO meeting_attendees (meeting_id, user_id, name, role, rsvp, attended) VALUES (?,?,?,?,?,?)');
+// For meeting 1 (m1)
+insertAttendee.run(m1, 1, 'Arjun Kumar', 'Owner', 'accepted', 1);
+insertAttendee.run(m1, 2, 'Priya Nair', 'Project Manager', 'accepted', 1);
+insertAttendee.run(m1, 3, 'Ramesh K.', 'Site Engineer', 'accepted', 1);
+insertAttendee.run(m1, 4, 'MK Construction', 'Contractor', 'accepted', 1);
+// For meeting 2 (m2)
+insertAttendee.run(m2, 2, 'Priya Nair', 'Project Manager', 'accepted', 1);
+insertAttendee.run(m2, 3, 'Ramesh K.', 'Site Engineer', 'accepted', 1);
+insertAttendee.run(m2, 8, 'Suresh Rao', 'Inspector', 'accepted', 1);
+console.log('  Inserted 7 meeting attendees');
 
 console.log('\nDatabase seeded successfully!');
 console.log('DB location:', DB_PATH);

@@ -19,7 +19,18 @@
       "WebSearch",
       "Bash(grep:*)",
       "Bash(kill 12073 && sleep 2 && lsof -i :3001 2>/dev/null || echo \"Port 3001 freed\")",
-      "Bash(lsof -ti:3001 | xargs kill -9 2>/dev/null; lsof -ti:5173 | xargs kill -9 2>/dev/null; sleep 1; echo \"ports freed\")"
+      "Bash(lsof -ti:3001 | xargs kill -9 2>/dev/null; lsof -ti:5173 | xargs kill -9 2>/dev/null; sleep 1; echo \"ports freed\")",
+      "Bash(git config:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(find /home/subash/Downloads/construction/client -name \"index.html\" -o -name \"index.jsx\" | xargs cat 2>/dev/null | head -50)",
+      "Bash(wc -l /home/subash/Downloads/construction/server/src/routes/*.js | tail -1)",
+      "Bash(ls -la /home/subash/Downloads/construction/server/src/*.js)",
+      "Bash(wc -l /home/subash/Downloads/construction/server/src/routes/*.js | sort -n | tail -20)",
+      "Bash(lsof -ti:3001 -ti:5173 2>/dev/null | xargs -r kill -9 2>/dev/null; sleep 1; cd /home/subash/Downloads/construction && npm run seed 2>&1 | tail -5)",
+      "Bash(find /home/subash/Downloads/construction/client/src -name \"*photo*\" -o -name \"*log*\" -o -name \"*canvas*\" -o -name \"*markup*\" 2>/dev/null | head -10)",
+      "Bash(grep -c \"requireAuth\" /home/subash/Downloads/construction/server/src/routes/*.js | sort -t: -k2 -n | head -10)",
+      "Bash(wc -l /home/subash/Downloads/construction/server/src/services/*.js)"
     ]
   }
 }

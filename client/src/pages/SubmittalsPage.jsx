@@ -1,26 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
+import { showError, showWarning } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
+import Pagination from '../components/ui/Pagination';
+import { SUBMITTAL_STATUS_COLORS as STATUS_COLORS, PRIORITY_COLORS_BORDERED as PRIORITY_COLORS } from '../config/constants';
 
-const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-600',
-  Submitted: 'bg-blue-100 text-blue-700',
-  'Under Review': 'bg-amber-100 text-amber-700',
-  'Revise & Resubmit': 'bg-orange-100 text-orange-700',
-  Approved: 'bg-green-100 text-green-700',
-  'Approved as Noted': 'bg-teal-100 text-teal-700',
-  Rejected: 'bg-red-100 text-red-700',
-  Closed: 'bg-slate-200 text-slate-500',
-};
-
-const PRIORITY_COLORS = {
-  high: 'bg-red-50 text-red-700 border-red-200',
-  medium: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  low: 'bg-slate-50 text-slate-600 border-slate-200',
-};
+const formatFileSize = (bytes) =>
+  bytes < 1024 ? bytes + ' B' : bytes < 1048576 ? (bytes / 1024).toFixed(1) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
 
 const TYPES = [
   { value: 'shop_drawing', label: 'Shop Drawing' },
@@ -42,6 +31,8 @@ export default function SubmittalsPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '', type: '' });
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [stages, setStages] = useState([]);
@@ -56,16 +47,23 @@ export default function SubmittalsPage() {
     let url = `/submittals?project_id=${pid}`;
     if (filter.status) url += `&status=${filter.status}`;
     if (filter.type) url += `&submittal_type=${filter.type}`;
+    url += `&page=${page}&limit=50`;
     Promise.all([
       api.get(url),
       api.get(`/submittals/summary?project_id=${pid}`),
     ]).then(([data, sum]) => {
-      setSubmittals(data);
+      if (data && data.data) {
+        setSubmittals(data.data);
+        setPagination(data.pagination);
+      } else {
+        setSubmittals(Array.isArray(data) ? data : []);
+        setPagination(null);
+      }
       setSummary(sum);
     }).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, [currentProject?.id, filter]);
+  useEffect(() => { loadData(); }, [currentProject?.id, filter, page]);
 
   useEffect(() => {
     if (!currentProject?.id) return;
@@ -78,13 +76,13 @@ export default function SubmittalsPage() {
       await api.patch(`/submittals/${sub.id}/status`, { status: newStatus });
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
   const handleDelete = async (sub) => {
     if (!confirm(`Delete ${sub.submittal_code}?`)) return;
-    try { await api.delete(`/submittals/${sub.id}`); loadData(); } catch (err) { alert(err.message); }
+    try { await api.delete(`/submittals/${sub.id}`); loadData(); } catch (err) { showError(err.message); }
   };
 
   if (!currentProject) return <div className="text-center py-12 text-slate-400">Select a project first</div>;
@@ -126,12 +124,12 @@ export default function SubmittalsPage() {
       )}
 
       <div className="flex items-center gap-2">
-        <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
+        <select value={filter.status} onChange={e => { setFilter(f => ({ ...f, status: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={filter.type} onChange={e => setFilter(f => ({ ...f, type: e.target.value }))}
+        <select value={filter.type} onChange={e => { setFilter(f => ({ ...f, type: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Types</option>
           {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -144,6 +142,7 @@ export default function SubmittalsPage() {
         <div className="text-center py-12 text-slate-400 text-sm">No submittals found</div>
       ) : (
         <div className="space-y-3">
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
           {submittals.map(sub => (
             <div key={sub.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-start justify-between gap-3">
@@ -161,6 +160,11 @@ export default function SubmittalsPage() {
                     </span>
                     {sub.revision !== 'R0' && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-50 text-purple-600">{sub.revision}</span>
+                    )}
+                    {sub.attachment_count > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600" title={`${sub.attachment_count} attachment(s)`}>
+                        📎 {sub.attachment_count}
+                      </span>
                     )}
                   </div>
                   <h3 className="text-sm font-semibold text-slate-800 cursor-pointer hover:text-blue-600"
@@ -217,6 +221,7 @@ export default function SubmittalsPage() {
               </div>
             </div>
           ))}
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
         </div>
       )}
 
@@ -249,9 +254,59 @@ function SubmittalModal({ submittal, projectId, stages, vendors, onClose, onSave
   const [saving, setSaving] = useState(false);
   const [showRevise, setShowRevise] = useState(false);
   const [newRevision, setNewRevision] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const loadAttachments = async (submittalId) => {
+    try {
+      const data = await api.get(`/submittals/${submittalId}/attachments`);
+      setAttachments(Array.isArray(data) ? data : []);
+    } catch {
+      setAttachments([]);
+    }
+  };
+
+  useEffect(() => {
+    if (isEdit && submittal?.id) loadAttachments(submittal.id);
+  }, [submittal?.id]);
+
+  const handleFileUpload = async (files) => {
+    if (!files || files.length === 0) return;
+    setUploadingFiles(true);
+    try {
+      const formData = new FormData();
+      for (const file of files) formData.append('files', file);
+      const res = await fetch(`/api/submittals/${submittal.id}/attachments`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Upload failed');
+      }
+      loadAttachments(submittal.id);
+    } catch (err) {
+      showError(err.message || 'Failed to upload files');
+    } finally {
+      setUploadingFiles(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachId) => {
+    if (!confirm('Delete this attachment?')) return;
+    try {
+      await api.delete(`/submittals/attachments/${attachId}`);
+      loadAttachments(submittal.id);
+    } catch (err) {
+      showError(err.message || 'Failed to delete attachment');
+    }
+  };
 
   const handleSave = async () => {
-    if (!form.title.trim()) return alert('Title is required');
+    if (!form.title.trim()) return showWarning('Title is required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -261,19 +316,19 @@ function SubmittalModal({ submittal, projectId, stages, vendors, onClose, onSave
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
   };
 
   const handleRevise = async () => {
-    if (!newRevision.trim()) return alert('Revision number is required');
+    if (!newRevision.trim()) return showWarning('Revision number is required');
     setSaving(true);
     try {
       await api.patch(`/submittals/${submittal.id}/revise`, { revision: newRevision, description: form.description });
       onSaved();
-    } catch (err) { alert(err.message); } finally { setSaving(false); }
+    } catch (err) { showError(err.message); } finally { setSaving(false); }
   };
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -368,6 +423,64 @@ function SubmittalModal({ submittal, projectId, stages, vendors, onClose, onSave
                     className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50">
                     {saving ? 'Submitting...' : 'Submit Revision'}
                   </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isEdit && (
+            <div className="border border-slate-200 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-semibold text-slate-700">Attachments ({attachments.length})</h4>
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    multiple
+                    className="hidden"
+                    onChange={e => handleFileUpload(e.target.files)}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFiles}
+                    className="text-[11px] px-2.5 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    {uploadingFiles ? 'Uploading...' : 'Upload Files'}
+                  </button>
+                </div>
+              </div>
+              {attachments.length === 0 ? (
+                <p className="text-[11px] text-slate-400 py-2 text-center">No attachments yet</p>
+              ) : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {attachments.map(att => (
+                    <div key={att.id} className="flex items-center justify-between bg-slate-50 rounded px-2.5 py-1.5 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-slate-700 truncate">{att.original_name || att.file_name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {att.file_size ? formatFileSize(att.file_size) : ''}{att.file_size && att.uploaded_at ? ' · ' : ''}
+                          {att.uploaded_at ? formatDate(att.uploaded_at) : ''}
+                          {att.uploaded_by_name ? ` · ${att.uploaded_by_name}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => window.open(`/api/submittals/attachments/${att.id}/download`)}
+                          className="text-[10px] px-2 py-0.5 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Download"
+                        >
+                          Download
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAttachment(att.id)}
+                          className="text-[10px] px-2 py-0.5 text-red-500 hover:bg-red-50 rounded"
+                          title="Delete"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

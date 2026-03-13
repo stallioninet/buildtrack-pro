@@ -5,34 +5,21 @@ import { useProject } from '../context/ProjectContext';
 import Badge from '../components/ui/Badge';
 import StatCard from '../components/ui/StatCard';
 import { formatDate } from '../utils/formatters';
+import { showError } from '../utils/toast';
+import {
+  INSPECTION_STATUSES, INSPECTION_RESULTS,
+  DEFECT_SEVERITIES, DEFECT_CATEGORIES, DEFECT_STATUSES,
+  DEFECT_SEVERITY_COLORS as SEVERITY_COLORS, STATUS_DOTS,
+  PRIORITY_COLORS_SUBTLE,
+} from '../config/constants';
 
 const INSPECTION_TYPES = ['General', 'Foundation Check', 'Soil Bearing', 'Concrete Cube Test', 'Rebar Inspection', 'Formwork Check', 'Concrete Pour', 'Safety Audit', 'Brick Quality', 'Waterproofing', 'Structural Alignment', 'Electrical', 'Plumbing', 'Fire Safety', 'Final Handover'];
-const INSPECTION_STATUSES = ['Scheduled', 'In Progress', 'Completed'];
-const INSPECTION_RESULTS = ['Pass', 'Conditional', 'Fail'];
-const DEFECT_SEVERITIES = ['Critical', 'High', 'Medium', 'Low'];
-const DEFECT_CATEGORIES = ['Structural', 'Workmanship', 'Material', 'Safety', 'Waterproofing', 'Electrical', 'Plumbing', 'Finishing'];
-const DEFECT_STATUSES = ['Open', 'In Progress', 'Resolved'];
 
 const INSPECTION_CATEGORIES = [
   { value: 'hold_point', label: 'Hold Point' },
   { value: 'witness_point', label: 'Witness Point' },
   { value: 'surveillance', label: 'Surveillance' },
 ];
-
-const SEVERITY_COLORS = {
-  Critical: 'bg-red-600 text-white',
-  High: 'bg-red-100 text-red-800',
-  Medium: 'bg-yellow-100 text-yellow-800',
-  Low: 'bg-slate-100 text-slate-600',
-};
-
-const STATUS_DOTS = {
-  Open: 'bg-red-500',
-  'In Progress': 'bg-amber-500',
-  Resolved: 'bg-green-500',
-  Scheduled: 'bg-blue-500',
-  Completed: 'bg-green-500',
-};
 
 export default function QualityPage() {
   const { user } = useAuth();
@@ -94,7 +81,7 @@ export default function QualityPage() {
       await api.delete(`/inspections/${insp.id}`);
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      showError(err.message || 'Failed to delete');
     }
   };
 
@@ -483,7 +470,7 @@ function InspectionModal({ mode, inspection, projectId, stages, users, canEdit, 
       await api.delete(`/tasks/${taskId}/inspections/${linkId}`);
       loadDetail();
     } catch (err) {
-      alert(err.message || 'Failed to unlink');
+      showError(err.message || 'Failed to unlink');
     }
   };
 
@@ -511,7 +498,7 @@ function InspectionModal({ mode, inspection, projectId, stages, users, canEdit, 
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     } finally {
       setSubmitting(false);
     }
@@ -837,7 +824,7 @@ function DefectModal({ mode, defect, projectId, inspections, onClose, onSaved })
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     } finally {
       setSubmitting(false);
     }
@@ -985,17 +972,13 @@ function LinkTaskPanel({ inspectionId, projectId, existingTaskIds, onLinked, onC
       });
       onLinked();
     } catch (err) {
-      alert(err.message || 'Failed to link task');
+      showError(err.message || 'Failed to link task');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const PRIORITY_COLORS = {
-    high: 'bg-red-50 text-red-600',
-    medium: 'bg-yellow-50 text-yellow-600',
-    low: 'bg-slate-50 text-slate-500',
-  };
+  const PRIORITY_COLORS = PRIORITY_COLORS_SUBTLE;
 
   return (
     <div className="border-t border-indigo-200 bg-indigo-50/40 rounded-b-lg -mx-5 -mb-4 mt-4">

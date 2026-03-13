@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   role_id INTEGER NOT NULL,
   owner_type TEXT,
+  phone TEXT,
   is_active INTEGER DEFAULT 1,
   created_by INTEGER,
   created_at TEXT DEFAULT (datetime('now')),
@@ -31,6 +32,8 @@ CREATE TABLE IF NOT EXISTS projects (
   total_budget REAL DEFAULT 0,
   spent REAL DEFAULT 0,
   completion INTEGER DEFAULT 0,
+  latitude REAL,
+  longitude REAL,
   created_by INTEGER,
   created_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (created_by) REFERENCES users(id)
@@ -401,8 +404,23 @@ CREATE TABLE IF NOT EXISTS notifications (
   FOREIGN KEY (triggered_by) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL UNIQUE,
+  task_assigned INTEGER DEFAULT 1,
+  status_change INTEGER DEFAULT 1,
+  comment INTEGER DEFAULT 1,
+  ncr_escalation INTEGER DEFAULT 1,
+  rfi_due_soon INTEGER DEFAULT 1,
+  document_approval INTEGER DEFAULT 1,
+  safety_alert INTEGER DEFAULT 1,
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_comments_entity ON comments(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notification_preferences_user ON notification_preferences(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_stage ON tasks(stage_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_expenses_stage ON expenses(stage_id);
@@ -616,6 +634,35 @@ CREATE TABLE IF NOT EXISTS meeting_action_items (
   FOREIGN KEY (assigned_to) REFERENCES users(id)
 );
 
+-- Punch Lists
+CREATE TABLE IF NOT EXISTS punch_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  punch_code TEXT NOT NULL UNIQUE,
+  project_id INTEGER NOT NULL,
+  stage_id INTEGER,
+  title TEXT NOT NULL,
+  description TEXT,
+  location TEXT,
+  category TEXT DEFAULT 'General',
+  priority TEXT DEFAULT 'medium',
+  status TEXT DEFAULT 'open',
+  assigned_to INTEGER,
+  due_date TEXT,
+  created_by INTEGER NOT NULL,
+  closed_by INTEGER,
+  closed_at TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (stage_id) REFERENCES stages(id),
+  FOREIGN KEY (assigned_to) REFERENCES users(id),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_punch_items_project ON punch_items(project_id);
+CREATE INDEX IF NOT EXISTS idx_punch_items_status ON punch_items(status);
+CREATE INDEX IF NOT EXISTS idx_punch_items_assigned ON punch_items(assigned_to);
+
 CREATE INDEX IF NOT EXISTS idx_change_orders_project ON change_orders(project_id);
 CREATE INDEX IF NOT EXISTS idx_safety_permits_project ON safety_permits(project_id);
 CREATE INDEX IF NOT EXISTS idx_safety_incidents_project ON safety_incidents(project_id);
@@ -624,3 +671,228 @@ CREATE INDEX IF NOT EXISTS idx_documents_project ON documents(project_id);
 CREATE INDEX IF NOT EXISTS idx_submittals_project ON submittals(project_id);
 CREATE INDEX IF NOT EXISTS idx_meetings_project ON meetings(project_id);
 CREATE INDEX IF NOT EXISTS idx_meeting_action_items_meeting ON meeting_action_items(meeting_id);
+
+-- Security: login attempts tracking
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  ip_address TEXT,
+  user_agent TEXT,
+  success INTEGER DEFAULT 0,
+  attempted_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_email ON login_attempts(email, attempted_at);
+CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_defects_task ON defects(task_id);
+
+-- Document pins / annotations
+CREATE TABLE IF NOT EXISTS document_pins (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  document_id INTEGER NOT NULL,
+  x REAL NOT NULL,
+  y REAL NOT NULL,
+  pin_type TEXT NOT NULL DEFAULT 'note',
+  title TEXT NOT NULL,
+  description TEXT,
+  severity TEXT DEFAULT 'info',
+  status TEXT DEFAULT 'open',
+  assigned_to INTEGER,
+  linked_ncr_id INTEGER,
+  linked_task_id INTEGER,
+  created_by INTEGER NOT NULL,
+  resolved_by INTEGER,
+  resolved_at TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_to) REFERENCES users(id),
+  FOREIGN KEY (created_by) REFERENCES users(id),
+  FOREIGN KEY (resolved_by) REFERENCES users(id),
+  FOREIGN KEY (linked_ncr_id) REFERENCES ncrs(id),
+  FOREIGN KEY (linked_task_id) REFERENCES tasks(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_pins_doc ON document_pins(document_id);
+CREATE INDEX IF NOT EXISTS idx_document_pins_status ON document_pins(status);
+
+-- Password reset tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  used INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
+
+-- Dashboard layouts (customizable widgets)
+CREATE TABLE IF NOT EXISTS dashboard_layouts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL UNIQUE,
+  layout TEXT NOT NULL,
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Resources (labor, equipment, material tracking)
+CREATE TABLE IF NOT EXISTS resources (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  resource_code TEXT NOT NULL UNIQUE,
+  project_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  unit TEXT,
+  rate REAL DEFAULT 0,
+  available_qty REAL DEFAULT 0,
+  status TEXT DEFAULT 'active',
+  created_by INTEGER,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS resource_assignments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  resource_id INTEGER NOT NULL,
+  task_id INTEGER NOT NULL,
+  planned_qty REAL DEFAULT 0,
+  actual_qty REAL DEFAULT 0,
+  date TEXT,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_resources_project ON resources(project_id);
+CREATE INDEX IF NOT EXISTS idx_resource_assignments_resource ON resource_assignments(resource_id);
+CREATE INDEX IF NOT EXISTS idx_resource_assignments_task ON resource_assignments(task_id);
+
+-- Bid/Procurement Management
+CREATE TABLE IF NOT EXISTS bid_packages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bid_code TEXT NOT NULL UNIQUE,
+  project_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  trade TEXT,
+  scope_of_work TEXT,
+  budget_estimate REAL DEFAULT 0,
+  bid_due_date TEXT,
+  status TEXT DEFAULT 'Draft',
+  created_by INTEGER NOT NULL,
+  awarded_to INTEGER,
+  awarded_amount REAL,
+  awarded_at TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (created_by) REFERENCES users(id),
+  FOREIGN KEY (awarded_to) REFERENCES vendors(id)
+);
+
+CREATE TABLE IF NOT EXISTS bid_responses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bid_package_id INTEGER NOT NULL,
+  vendor_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  notes TEXT,
+  attachments TEXT,
+  submitted_at TEXT DEFAULT (datetime('now')),
+  score REAL,
+  is_selected INTEGER DEFAULT 0,
+  FOREIGN KEY (bid_package_id) REFERENCES bid_packages(id) ON DELETE CASCADE,
+  FOREIGN KEY (vendor_id) REFERENCES vendors(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bid_packages_project ON bid_packages(project_id);
+CREATE INDEX IF NOT EXISTS idx_bid_responses_package ON bid_responses(bid_package_id);
+
+-- Photo annotations (markup)
+CREATE TABLE IF NOT EXISTS photo_annotations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  attachment_id INTEGER NOT NULL,
+  annotation_data TEXT NOT NULL,
+  thumbnail_data TEXT,
+  created_by INTEGER NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (attachment_id) REFERENCES task_attachments(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_photo_annotations_attachment ON photo_annotations(attachment_id);
+
+-- Meeting attendees (structured)
+CREATE TABLE IF NOT EXISTS meeting_attendees (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  meeting_id INTEGER NOT NULL,
+  user_id INTEGER,
+  name TEXT NOT NULL,
+  role TEXT,
+  rsvp TEXT DEFAULT 'pending',
+  attended INTEGER DEFAULT 0,
+  FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_meeting_attendees_meeting ON meeting_attendees(meeting_id);
+
+-- Submittal attachments
+CREATE TABLE IF NOT EXISTS submittal_attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  submittal_id INTEGER NOT NULL,
+  file_name TEXT NOT NULL,
+  original_name TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  mime_type TEXT NOT NULL,
+  uploaded_by INTEGER NOT NULL,
+  uploaded_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (submittal_id) REFERENCES submittals(id) ON DELETE CASCADE,
+  FOREIGN KEY (uploaded_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_submittal_attachments ON submittal_attachments(submittal_id);
+
+-- Schedule of Values line items
+CREATE TABLE IF NOT EXISTS sov_line_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL,
+  stage_id INTEGER,
+  cost_code TEXT,
+  description TEXT NOT NULL,
+  trade TEXT,
+  scheduled_value REAL DEFAULT 0,
+  previous_billed REAL DEFAULT 0,
+  current_billed REAL DEFAULT 0,
+  stored_materials REAL DEFAULT 0,
+  percent_complete REAL DEFAULT 0,
+  retainage_percent REAL DEFAULT 5,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (stage_id) REFERENCES stages(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sov_line_items_project ON sov_line_items(project_id);
+
+-- FTS5 full-text search indexes
+CREATE VIRTUAL TABLE IF NOT EXISTS fts_search USING fts5(
+  entity_type,
+  entity_id UNINDEXED,
+  project_id UNINDEXED,
+  code,
+  title,
+  description,
+  path UNINDEXED,
+  content='',
+  tokenize='unicode61'
+);

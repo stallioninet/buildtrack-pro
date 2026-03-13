@@ -35,7 +35,7 @@ export default function TaskStatusSelect({ value, onChange, disabled }) {
   return (
     <select
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => { if (e.target.value !== value) onChange(e.target.value); }}
       className={`text-xs font-medium rounded px-2 py-1 border-0 cursor-pointer ${statusColor(value)}`}
     >
       {options.map((opt) => (

@@ -1,4 +1,6 @@
-export default function StatCard({ label, value, sub, color = 'blue' }) {
+import { memo } from 'react';
+
+function StatCard({ label, value, sub, color = 'blue' }) {
   const colors = {
     blue: 'border-blue-500 bg-blue-50',
     green: 'border-green-500 bg-green-50',
@@ -16,3 +18,5 @@ export default function StatCard({ label, value, sub, color = 'blue' }) {
     </div>
   );
 }
+
+export default memo(StatCard);

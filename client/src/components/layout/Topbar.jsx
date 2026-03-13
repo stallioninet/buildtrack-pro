@@ -6,7 +6,7 @@ import { ROLE_LABELS } from '../../config/navigation';
 import NotificationBell from '../shared/NotificationBell';
 import GlobalSearch from '../shared/GlobalSearch';
 
-export default function Topbar() {
+export default function Topbar({ onMenuToggle }) {
   const { user, logout } = useAuth();
   const { projects, currentProject, selectProject } = useProject();
   const navigate = useNavigate();
@@ -31,8 +31,15 @@ export default function Topbar() {
   const ownerTypeLabel = user?.owner_type === 'firm' ? 'Construction Firm' : user?.role === 'owner' ? 'Home Owner' : '';
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
+    <header role="banner" aria-label="Top navigation bar" className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6">
       <div className="flex items-center gap-4">
+        {onMenuToggle && (
+          <button onClick={onMenuToggle} className="lg:hidden p-2 rounded-lg hover:bg-slate-100 mr-2" aria-label="Open menu">
+            <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        )}
         {/* Project selector */}
         {currentProject && projects.length > 0 && (
           <div className="relative" ref={dropdownRef}>

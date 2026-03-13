@@ -3,14 +3,9 @@ import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
+import { showError, showWarning, showSuccess } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
-
-const STATUS_COLORS = {
-  Scheduled: 'bg-blue-100 text-blue-700',
-  'In Progress': 'bg-amber-100 text-amber-700',
-  Completed: 'bg-green-100 text-green-700',
-  Cancelled: 'bg-red-100 text-red-500',
-};
+import { MEETING_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
 
 const MEETING_TYPES = [
   { value: 'progress', label: 'Progress Review' },
@@ -58,19 +53,19 @@ export default function MeetingsPage() {
     try {
       await api.patch(`/meetings/${meeting.id}/status`, { status: newStatus });
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   const handleDelete = async (meeting) => {
     if (!confirm(`Delete ${meeting.meeting_code}?`)) return;
-    try { await api.delete(`/meetings/${meeting.id}`); loadData(); if (detailView?.id === meeting.id) setDetailView(null); } catch (err) { alert(err.message); }
+    try { await api.delete(`/meetings/${meeting.id}`); loadData(); if (detailView?.id === meeting.id) setDetailView(null); } catch (err) { showError(err.message); }
   };
 
   const openDetail = async (meeting) => {
     try {
       const detail = await api.get(`/meetings/${meeting.id}`);
       setDetailView(detail);
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   if (!currentProject) return <div className="text-center py-12 text-slate-400">Select a project first</div>;
@@ -206,10 +201,65 @@ function MeetingDetail({ meeting, user, canCreate, onEdit, onDelete, onRefresh }
   const [newAction, setNewAction] = useState({ description: '', assigned_to: '', due_date: '' });
   const [users, setUsers] = useState([]);
   const [adding, setAdding] = useState(false);
+  const [attendees, setAttendees] = useState([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
+  const [addAttendeeId, setAddAttendeeId] = useState('');
+  const [convertingAction, setConvertingAction] = useState(null);
 
   useEffect(() => {
     api.get('/auth/users').then(setUsers).catch(() => {});
   }, []);
+
+  const loadAttendees = async () => {
+    setAttendeesLoading(true);
+    try {
+      const data = await api.get(`/meetings/${meeting.id}/attendees`);
+      setAttendees(data);
+    } catch { setAttendees([]); }
+    finally { setAttendeesLoading(false); }
+  };
+
+  useEffect(() => { loadAttendees(); }, [meeting.id]);
+
+  const handleAddAttendee = async () => {
+    if (!addAttendeeId) return;
+    try {
+      await api.post(`/meetings/${meeting.id}/attendees`, { user_id: addAttendeeId });
+      setAddAttendeeId('');
+      loadAttendees();
+    } catch (err) { showError(err.message); }
+  };
+
+  const handleRemoveAttendee = async (attendeeId) => {
+    try {
+      await api.delete(`/meetings/${meeting.id}/attendees/${attendeeId}`);
+      loadAttendees();
+    } catch (err) { showError(err.message); }
+  };
+
+  const handleRsvpChange = async (attendeeId, rsvpStatus) => {
+    try {
+      await api.patch(`/meetings/${meeting.id}/attendees/${attendeeId}`, { rsvp_status: rsvpStatus });
+      loadAttendees();
+    } catch (err) { showError(err.message); }
+  };
+
+  const handleAttendedToggle = async (attendeeId, attended) => {
+    try {
+      await api.patch(`/meetings/${meeting.id}/attendees/${attendeeId}`, { attended: attended ? 1 : 0 });
+      loadAttendees();
+    } catch (err) { showError(err.message); }
+  };
+
+  const handleConvertToTask = async (actionId) => {
+    setConvertingAction(actionId);
+    try {
+      await api.post(`/meetings/actions/${actionId}/convert-to-task`);
+      showSuccess('Action item converted to task successfully');
+      onRefresh();
+    } catch (err) { showError(err.message || 'Failed to convert to task'); }
+    finally { setConvertingAction(null); }
+  };
 
   const handleAddAction = async () => {
     if (!newAction.description.trim()) return;
@@ -218,7 +268,7 @@ function MeetingDetail({ meeting, user, canCreate, onEdit, onDelete, onRefresh }
       await api.post(`/meetings/${meeting.id}/actions`, newAction);
       setNewAction({ description: '', assigned_to: '', due_date: '' });
       onRefresh();
-    } catch (err) { alert(err.message); } finally { setAdding(false); }
+    } catch (err) { showError(err.message); } finally { setAdding(false); }
   };
 
   const toggleAction = async (action) => {
@@ -226,14 +276,12 @@ function MeetingDetail({ meeting, user, canCreate, onEdit, onDelete, onRefresh }
     try {
       await api.patch(`/meetings/actions/${action.id}`, { status: newStatus });
       onRefresh();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   const deleteAction = async (action) => {
-    try { await api.delete(`/meetings/actions/${action.id}`); onRefresh(); } catch (err) { alert(err.message); }
+    try { await api.delete(`/meetings/actions/${action.id}`); onRefresh(); } catch (err) { showError(err.message); }
   };
-
-  const attendeeList = meeting.attendees ? meeting.attendees.split(',').map(a => a.trim()).filter(Boolean) : [];
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -263,16 +311,55 @@ function MeetingDetail({ meeting, user, canCreate, onEdit, onDelete, onRefresh }
           <div><span className="text-slate-400">Organizer:</span> <span className="text-slate-700">{meeting.organized_by_name || '-'}</span></div>
         </div>
 
-        {attendeeList.length > 0 && (
-          <div>
-            <p className="text-xs font-medium text-slate-500 mb-1">Attendees</p>
-            <div className="flex flex-wrap gap-1">
-              {attendeeList.map((a, i) => (
-                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{a}</span>
+        {/* Attendees Section */}
+        <div>
+          <p className="text-xs font-medium text-slate-500 mb-2">Attendees {attendeesLoading ? '' : `(${attendees.length})`}</p>
+          {attendeesLoading ? (
+            <p className="text-[11px] text-slate-400">Loading attendees...</p>
+          ) : (
+            <div className="space-y-1.5">
+              {attendees.map(att => (
+                <div key={att.id} className="flex items-center gap-2 p-1.5 rounded-lg border border-slate-100 bg-white text-xs">
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-slate-700">{att.user_name || att.name || 'Unknown'}</span>
+                    {att.role && <span className="ml-1 text-[10px] text-slate-400">({att.role})</span>}
+                  </div>
+                  <select value={att.rsvp_status || 'pending'} onChange={e => handleRsvpChange(att.id, e.target.value)}
+                    className="text-[10px] border border-slate-200 rounded px-1 py-0.5 bg-white">
+                    <option value="pending">Pending</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="declined">Declined</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <input type="checkbox" checked={!!att.attended}
+                      onChange={e => handleAttendedToggle(att.id, e.target.checked)}
+                      disabled={!['Completed', 'In Progress'].includes(meeting.status)}
+                      className="w-3 h-3 rounded" />
+                    Attended
+                  </label>
+                  {canCreate && (
+                    <button onClick={() => handleRemoveAttendee(att.id)}
+                      className="text-slate-300 hover:text-red-400 text-xs flex-shrink-0">&times;</button>
+                  )}
+                </div>
               ))}
+              {attendees.length === 0 && <p className="text-[11px] text-slate-400">No attendees added yet.</p>}
             </div>
-          </div>
-        )}
+          )}
+          {canCreate && (
+            <div className="mt-2 flex gap-2">
+              <select value={addAttendeeId} onChange={e => setAddAttendeeId(e.target.value)}
+                className="flex-1 text-xs border border-slate-200 rounded px-2 py-1.5">
+                <option value="">Select user...</option>
+                {users.filter(u => !attendees.some(a => a.user_id === u.id)).map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                ))}
+              </select>
+              <button onClick={handleAddAttendee} disabled={!addAttendeeId}
+                className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">Add</button>
+            </div>
+          )}
+        </div>
 
         {meeting.agenda && (
           <div>
@@ -312,6 +399,13 @@ function MeetingDetail({ meeting, user, canCreate, onEdit, onDelete, onRefresh }
                     {action.due_date && <span className={new Date(action.due_date) < new Date() && action.status !== 'completed' ? 'text-red-500' : ''}>Due: {formatDate(action.due_date)}</span>}
                   </div>
                 </div>
+                {action.status !== 'completed' && (
+                  <button onClick={() => handleConvertToTask(action.id)} disabled={convertingAction === action.id}
+                    title="Convert to Task"
+                    className="text-slate-300 hover:text-blue-500 text-xs flex-shrink-0 disabled:opacity-50">
+                    {convertingAction === action.id ? '...' : '→'}
+                  </button>
+                )}
                 <button onClick={() => deleteAction(action)} className="text-slate-300 hover:text-red-400 text-xs flex-shrink-0">&times;</button>
               </div>
             ))}
@@ -359,7 +453,7 @@ function MeetingModal({ meeting, projectId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.title.trim() || !form.meeting_date) return alert('Title and date are required');
+    if (!form.title.trim() || !form.meeting_date) return showWarning('Title and date are required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -368,7 +462,7 @@ function MeetingModal({ meeting, projectId, onClose, onSaved }) {
         await api.post('/meetings', { ...form, project_id: projectId });
       }
       onSaved();
-    } catch (err) { alert(err.message || 'Failed to save'); } finally { setSaving(false); }
+    } catch (err) { showError(err.message || 'Failed to save'); } finally { setSaving(false); }
   };
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));

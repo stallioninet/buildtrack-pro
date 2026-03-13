@@ -20,3 +20,45 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Responsive modal support */
+@layer utilities {
+  .modal-panel {
+    @apply max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto;
+  }
+}
+
+/* Print styles */
+@media print {
+  /* Hide non-content elements */
+  nav, aside, .sidebar,
+  button, .no-print,
+  [data-sidebar], [data-topbar],
+  .fixed { display: none !important; }
+
+  /* Reset layout */
+  body { background: white !important; }
+  main, [data-main-content] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure charts and cards print properly */
+  .bg-white { background: white !important; box-shadow: none !important; }
+  .border { border-color: #e2e8f0 !important; }
+  .rounded-xl { border-radius: 8px !important; }
+
+  /* Page breaks */
+  .page-break-before { page-break-before: always; }
+  .page-break-after { page-break-after: always; }
+  h1, h2, h3 { page-break-after: avoid; }
+  .recharts-wrapper { page-break-inside: avoid; }
+
+  /* Stat cards in print */
+  .grid { display: grid !important; }
+
+  /* Show print-only content */
+  .print-only { display: block !important; }
+}

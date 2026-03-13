@@ -4,22 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
 import Badge from '../components/ui/Badge';
 import { formatDate } from '../utils/formatters';
-
-const SEVERITY_COLORS = {
-  Critical: 'bg-red-600 text-white',
-  High: 'bg-red-100 text-red-800',
-  Medium: 'bg-yellow-100 text-yellow-800',
-  Low: 'bg-slate-100 text-slate-600',
-};
-
-const STATUS_DOTS = {
-  Open: 'bg-red-500',
-  'In Progress': 'bg-amber-500',
-  Resolved: 'bg-green-500',
-};
-
-const DEFECT_STATUSES = ['Open', 'In Progress', 'Resolved'];
-const DEFECT_SEVERITIES = ['Critical', 'High', 'Medium', 'Low'];
+import { showError } from '../utils/toast';
+import { DEFECT_SEVERITY_COLORS as SEVERITY_COLORS, STATUS_DOTS, DEFECT_STATUSES, DEFECT_SEVERITIES } from '../config/constants';
 
 export default function DefectsPage() {
   const { user } = useAuth();
@@ -49,7 +35,7 @@ export default function DefectsPage() {
       await api.patch(`/inspections/defects/${defectId}`, { status: newStatus });
       loadDefects();
     } catch (err) {
-      alert(err.message || 'Failed to update');
+      showError(err.message || 'Failed to update');
     }
   };
 

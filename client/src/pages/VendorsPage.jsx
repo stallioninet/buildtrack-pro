@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import Badge from '../components/ui/Badge';
+import { showError, showWarning } from '../utils/toast';
 
 const VENDOR_TYPES = ['Supplier', 'Contractor', 'Consultant', 'Transporter', 'Equipment', 'Other'];
 
@@ -30,7 +31,7 @@ export default function VendorsPage() {
     try {
       await api.delete(`/vendors/${id}`);
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   if (!currentProject) return <div className="text-center py-12 text-slate-400">Select a project first</div>;
@@ -114,7 +115,7 @@ function VendorModal({ vendor, projectId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.name.trim()) return alert('Name is required');
+    if (!form.name.trim()) return showWarning('Name is required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -124,7 +125,7 @@ function VendorModal({ vendor, projectId, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     } finally { setSaving(false); }
   };
 

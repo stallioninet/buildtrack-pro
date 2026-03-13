@@ -1,0 +1,26 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Render
+        run: |
+          echo "Render auto-deploys from main branch."
+          echo "Ensure Render webhook is configured for this repo."
+          # If using Render deploy hook:
+          # curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Vercel
+        run: |
+          echo "Vercel auto-deploys from main branch."
+          echo "Ensure Vercel GitHub integration is connected."

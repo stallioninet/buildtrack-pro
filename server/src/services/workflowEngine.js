@@ -8,11 +8,20 @@ import db from '../config/db.js';
  * All entity route handlers should call this service instead of hard-coding transitions.
  */
 
-// Cache workflow definitions (they don't change at runtime)
+// Cache workflow definitions with TTL-based eviction
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 50;
 const workflowCache = new Map();
 
 function loadWorkflow(machineKey) {
-  if (workflowCache.has(machineKey)) return workflowCache.get(machineKey);
+  if (workflowCache.has(machineKey)) {
+    const entry = workflowCache.get(machineKey);
+    if (Date.now() - entry.timestamp < CACHE_TTL) {
+      return entry.data;
+    }
+    // Expired — treat as cache miss
+    workflowCache.delete(machineKey);
+  }
 
   const row = db.prepare('SELECT * FROM state_machines WHERE machine_key = ?').get(machineKey);
   if (!row) return null;
@@ -29,7 +38,16 @@ function loadWorkflow(machineKey) {
     blocking: row.blocking_json ? JSON.parse(row.blocking_json) : [],
   };
 
-  workflowCache.set(machineKey, workflow);
+  // Evict oldest half if cache exceeds max size
+  if (workflowCache.size >= MAX_CACHE_SIZE) {
+    const entries = [...workflowCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = Math.ceil(entries.length / 2);
+    for (let i = 0; i < toRemove; i++) {
+      workflowCache.delete(entries[i][0]);
+    }
+  }
+
+  workflowCache.set(machineKey, { data: workflow, timestamp: Date.now() });
   return workflow;
 }
 

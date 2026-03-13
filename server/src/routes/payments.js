@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../config/db.js';
 import { requireAuth, getUserProjectIds } from '../middleware/auth.js';
+import { generateNextCode } from '../services/codeGenerator.js';
 
 const router = Router();
 
@@ -36,8 +37,7 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Vendor and amount are required' });
   }
 
-  const count = db.prepare('SELECT COUNT(*) as c FROM payments').get().c;
-  const payment_code = `PAY-${String(count + 1).padStart(3, '0')}`;
+  const payment_code = generateNextCode('payments', 'payment_code', 'PAY');
 
   const result = db.prepare(`
     INSERT INTO payments (payment_code, vendor_id, stage_id, amount, status, payment_date)
@@ -59,6 +59,10 @@ router.patch('/:id/status', requireAuth, (req, res) => {
   const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
   if (!payment) return res.status(404).json({ error: 'Payment not found' });
 
+  if (!['owner', 'pm', 'accounts'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Not authorized to change payment status' });
+  }
+
   db.prepare('UPDATE payments SET status = ? WHERE id = ?').run(status, payment.id);
 
   db.prepare(`
@@ -73,6 +77,10 @@ router.patch('/:id/status', requireAuth, (req, res) => {
 router.patch('/:id', requireAuth, (req, res) => {
   const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
   if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+  if (!['owner', 'pm', 'accounts'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Not authorized to edit payments' });
+  }
 
   const { vendor_id, stage_id, amount, payment_date } = req.body;
   db.prepare(`

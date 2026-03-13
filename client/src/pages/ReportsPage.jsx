@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { formatCurrency } from '../utils/formatters';
@@ -8,14 +8,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
+import { REPORT_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
+import PrintButton from '../components/shared/PrintButton';
+
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
-const STATUS_COLORS = {
-  not_started: '#94a3b8', in_progress: '#3b82f6', completed: '#10b981',
-  on_hold: '#f59e0b', rework: '#ef4444', ready_for_inspection: '#8b5cf6',
-  Pass: '#10b981', Fail: '#ef4444', Conditional: '#f59e0b',
-  Open: '#3b82f6', Closed: '#10b981', Resolved: '#10b981',
-  Critical: '#ef4444', Major: '#f59e0b', Minor: '#94a3b8', High: '#ef4444', Medium: '#f59e0b', Low: '#94a3b8',
-};
 
 export default function ReportsPage() {
   const { currentProject } = useProject();
@@ -55,7 +51,10 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Reports & Analytics</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-800">Reports & Analytics</h1>
+        <PrintButton />
+      </div>
 
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
         {tabs.map(t => (
@@ -76,12 +75,16 @@ export default function ReportsPage() {
 
 function OverviewTab({ data }) {
   const { project, stages, taskStats, inspectionStats, ncrStats, rfiStats, defectStats } = data;
-  const totalTasks = taskStats.reduce((s, t) => s + t.count, 0);
-  const completedTasks = taskStats.find(t => t.status === 'completed')?.count || 0;
-  const totalNCRs = ncrStats.reduce((s, n) => s + n.count, 0);
-  const openNCRs = ncrStats.filter(n => !['Closed', 'Void'].includes(n.status)).reduce((s, n) => s + n.count, 0);
-  const totalRFIs = rfiStats.reduce((s, r) => s + r.count, 0);
-  const totalDefects = defectStats.reduce((s, d) => s + d.count, 0);
+  const overviewStats = useMemo(() => {
+    const totalTasks = taskStats.reduce((s, t) => s + t.count, 0);
+    const completedTasks = taskStats.find(t => t.status === 'completed')?.count || 0;
+    const totalNCRs = ncrStats.reduce((s, n) => s + n.count, 0);
+    const openNCRs = ncrStats.filter(n => !['Closed', 'Void'].includes(n.status)).reduce((s, n) => s + n.count, 0);
+    const totalRFIs = rfiStats.reduce((s, r) => s + r.count, 0);
+    const totalDefects = defectStats.reduce((s, d) => s + d.count, 0);
+    return { totalTasks, completedTasks, totalNCRs, openNCRs, totalRFIs, totalDefects };
+  }, [taskStats, ncrStats, rfiStats, defectStats]);
+  const { totalTasks, completedTasks, totalNCRs, openNCRs, totalRFIs, totalDefects } = overviewStats;
 
   return (
     <div className="space-y-6">
@@ -151,13 +154,15 @@ function OverviewTab({ data }) {
 
 function BudgetTab({ data }) {
   const { project, stagesBudget, expensesByCategory, expensesByMonth, paymentsByMonth } = data;
-  const remaining = (project?.total_budget || 0) - (project?.spent || 0);
-  const utilization = project?.total_budget > 0 ? Math.round((project.spent / project.total_budget) * 100) : 0;
+  const remaining = useMemo(() => (project?.total_budget || 0) - (project?.spent || 0), [project]);
+  const utilization = useMemo(() => project?.total_budget > 0 ? Math.round((project.spent / project.total_budget) * 100) : 0, [project]);
 
-  const monthlyData = {};
-  expensesByMonth?.forEach(e => { monthlyData[e.month] = { ...monthlyData[e.month], month: e.month, expenses: e.total }; });
-  paymentsByMonth?.forEach(p => { monthlyData[p.month] = { ...monthlyData[p.month], month: p.month, payments: p.total }; });
-  const combinedMonthly = Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
+  const combinedMonthly = useMemo(() => {
+    const monthlyData = {};
+    expensesByMonth?.forEach(e => { monthlyData[e.month] = { ...monthlyData[e.month], month: e.month, expenses: e.total }; });
+    paymentsByMonth?.forEach(p => { monthlyData[p.month] = { ...monthlyData[p.month], month: p.month, payments: p.total }; });
+    return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
+  }, [expensesByMonth, paymentsByMonth]);
 
   return (
     <div className="space-y-6">
@@ -219,7 +224,7 @@ function BudgetTab({ data }) {
 
 function QualityTab({ data }) {
   const { inspectionsByResult, inspectionsByCategory, ncrsBySeverity, ncrsByCategory, ncrTrend, defectsBySeverity, passRate } = data;
-  const passRatePct = passRate?.total > 0 ? Math.round((passRate.passed / passRate.total) * 100) : 0;
+  const passRatePct = useMemo(() => passRate?.total > 0 ? Math.round((passRate.passed / passRate.total) * 100) : 0, [passRate]);
 
   return (
     <div className="space-y-6">
@@ -296,8 +301,8 @@ function QualityTab({ data }) {
 
 function TasksTab({ data }) {
   const { byStatus, byPriority, byStage, overdue } = data;
-  const totalTasks = byStatus?.reduce((s, t) => s + t.count, 0) || 0;
-  const completed = byStatus?.find(t => t.status === 'completed')?.count || 0;
+  const totalTasks = useMemo(() => byStatus?.reduce((s, t) => s + t.count, 0) || 0, [byStatus]);
+  const completed = useMemo(() => byStatus?.find(t => t.status === 'completed')?.count || 0, [byStatus]);
 
   return (
     <div className="space-y-6">

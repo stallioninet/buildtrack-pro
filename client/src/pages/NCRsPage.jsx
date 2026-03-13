@@ -3,25 +3,13 @@ import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
+import { showError, showWarning } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
-
-const SEVERITY_COLORS = {
-  Critical: 'bg-red-100 text-red-700 border-red-200',
-  Major: 'bg-orange-100 text-orange-700 border-orange-200',
-  Minor: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-};
-
-const STATUS_COLORS = {
-  Identified: 'bg-slate-100 text-slate-700',
-  Reported: 'bg-blue-100 text-blue-700',
-  'Under Review': 'bg-amber-100 text-amber-700',
-  'Root Cause Analysis': 'bg-purple-100 text-purple-700',
-  Disposition: 'bg-indigo-100 text-indigo-700',
-  'Corrective Action': 'bg-orange-100 text-orange-700',
-  Verification: 'bg-teal-100 text-teal-700',
-  Closed: 'bg-green-100 text-green-700',
-  Void: 'bg-slate-200 text-slate-500',
-};
+import Pagination from '../components/ui/Pagination';
+import FormInput from '../components/ui/FormInput';
+import useFormValidation from '../hooks/useFormValidation';
+import { NCR_SEVERITY_COLORS as SEVERITY_COLORS, NCR_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 const STATUSES = ['Identified', 'Reported', 'Under Review', 'Root Cause Analysis', 'Disposition', 'Corrective Action', 'Verification', 'Closed'];
 const SEVERITIES = ['Minor', 'Major', 'Critical'];
@@ -41,6 +29,8 @@ export default function NCRsPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '', severity: '' });
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedNCR, setSelectedNCR] = useState(null);
   const [stages, setStages] = useState([]);
@@ -53,15 +43,21 @@ export default function NCRsPage() {
     if (!currentProject?.id) return;
     const pid = currentProject.id;
     Promise.all([
-      api.get(`/ncrs?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}${filter.severity ? `&severity=${filter.severity}` : ''}`),
+      api.get(`/ncrs?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}${filter.severity ? `&severity=${filter.severity}` : ''}&page=${page}&limit=50`),
       api.get(`/ncrs/summary?project_id=${pid}`),
     ]).then(([ncrsData, summaryData]) => {
-      setNCRs(ncrsData);
+      if (ncrsData && ncrsData.data) {
+        setNCRs(ncrsData.data);
+        setPagination(ncrsData.pagination);
+      } else {
+        setNCRs(Array.isArray(ncrsData) ? ncrsData : []);
+        setPagination(null);
+      }
       setSummary(summaryData);
     }).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, [currentProject?.id, filter]);
+  useEffect(() => { loadData(); }, [currentProject?.id, filter, page]);
 
   useEffect(() => {
     if (!currentProject?.id) return;
@@ -74,7 +70,7 @@ export default function NCRsPage() {
       await api.patch(`/ncrs/${ncr.id}/status`, { status: newStatus });
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -126,12 +122,12 @@ export default function NCRsPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
+        <select value={filter.status} onChange={e => { setFilter(f => ({ ...f, status: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={filter.severity} onChange={e => setFilter(f => ({ ...f, severity: e.target.value }))}
+        <select value={filter.severity} onChange={e => { setFilter(f => ({ ...f, severity: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Severities</option>
           {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -140,11 +136,12 @@ export default function NCRsPage() {
 
       {/* NCR List */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400 text-sm">Loading NCRs...</div>
+        <SkeletonTable rows={6} />
       ) : ncrs.length === 0 ? (
         <div className="text-center py-12 text-slate-400 text-sm">No NCRs found</div>
       ) : (
         <div className="space-y-3">
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
           {ncrs.map(ncr => (
             <div key={ncr.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-start justify-between gap-3">
@@ -189,6 +186,7 @@ export default function NCRsPage() {
               </div>
             </div>
           ))}
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
         </div>
       )}
 
@@ -226,9 +224,12 @@ function NCRModal({ ncr, projectId, stages, users, onClose, onSaved }) {
     verification_notes: ncr?.verification_notes || '',
   });
   const [saving, setSaving] = useState(false);
+  const { errors, validate, clearError } = useFormValidation({
+    title: { required: true, label: 'Title', minLength: 3 },
+  });
 
   const handleSave = async () => {
-    if (!form.title.trim()) return alert('Title is required');
+    if (!validate(form)) return;
     setSaving(true);
     try {
       if (isEdit) {
@@ -238,7 +239,7 @@ function NCRModal({ ncr, projectId, stages, users, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save NCR');
+      showError(err.message || 'Failed to save NCR');
     } finally {
       setSaving(false);
     }
@@ -258,12 +259,10 @@ function NCRModal({ ncr, projectId, stages, users, onClose, onSaved }) {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Title */}
-          <div>
-            <label className="text-xs text-slate-500 font-medium">Title *</label>
-            <input type="text" value={form.title} onChange={e => set('title', e.target.value)}
-              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1"
-              placeholder="Brief description of the non-conformance" />
-          </div>
+          <FormInput label="Title" required name="title" value={form.title}
+            onChange={e => { set('title', e.target.value); clearError('title'); }}
+            error={errors.title}
+            placeholder="Brief description of the non-conformance" />
 
           {/* Row: Severity + Category + Stage */}
           <div className="grid grid-cols-3 gap-3">

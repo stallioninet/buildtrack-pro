@@ -61,6 +61,9 @@ router.post('/', requireAuth, (req, res) => {
 router.patch('/:id', requireAuth, (req, res) => {
   const meeting = db.prepare('SELECT * FROM meetings WHERE id = ?').get(req.params.id);
   if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+  if (!['pm', 'engineer', 'owner'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Not authorized to edit meetings' });
+  }
   const { title, meeting_type, meeting_date, start_time, end_time, location, attendees, agenda, minutes, decisions } = req.body;
   db.prepare(`UPDATE meetings SET title=COALESCE(?,title), meeting_type=COALESCE(?,meeting_type),
     meeting_date=COALESCE(?,meeting_date), start_time=COALESCE(?,start_time), end_time=COALESCE(?,end_time),
@@ -74,6 +77,9 @@ router.patch('/:id/status', requireAuth, (req, res) => {
   const { status } = req.body;
   const meeting = db.prepare('SELECT * FROM meetings WHERE id = ?').get(req.params.id);
   if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+  if (!['pm', 'engineer', 'owner'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Not authorized to change meeting status' });
+  }
   db.prepare("UPDATE meetings SET status=?, updated_at=datetime('now') WHERE id=?").run(status, meeting.id);
   res.json({ success: true });
 });
@@ -104,8 +110,71 @@ router.patch('/actions/:actionId', requireAuth, (req, res) => {
 router.delete('/actions/:actionId', requireAuth, (req, res) => {
   const action = db.prepare('SELECT * FROM meeting_action_items WHERE id = ?').get(req.params.actionId);
   if (!action) return res.status(404).json({ error: 'Action item not found' });
+  if (!['pm', 'engineer', 'owner'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Not authorized to delete action items' });
+  }
   db.prepare('DELETE FROM meeting_action_items WHERE id = ?').run(action.id);
   res.json({ success: true });
+});
+
+// Attendees
+router.get('/:id/attendees', requireAuth, (req, res) => {
+  const attendees = db.prepare(`SELECT ma.*, u.name as user_name, u.email as user_email
+    FROM meeting_attendees ma LEFT JOIN users u ON ma.user_id = u.id
+    WHERE ma.meeting_id = ? ORDER BY ma.id`).all(req.params.id);
+  res.json(attendees);
+});
+
+router.post('/:id/attendees', requireAuth, (req, res) => {
+  const meeting = db.prepare('SELECT * FROM meetings WHERE id = ?').get(req.params.id);
+  if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+  const { user_id, name, role } = req.body;
+  if (!name && !user_id) return res.status(400).json({ error: 'Name or user is required' });
+  const attendeeName = name || db.prepare('SELECT name FROM users WHERE id = ?').get(user_id)?.name || 'Unknown';
+  const result = db.prepare('INSERT INTO meeting_attendees (meeting_id, user_id, name, role) VALUES (?, ?, ?, ?)')
+    .run(meeting.id, user_id || null, attendeeName, role || null);
+  res.status(201).json(db.prepare('SELECT * FROM meeting_attendees WHERE id = ?').get(result.lastInsertRowid));
+});
+
+router.patch('/attendees/:attendeeId', requireAuth, (req, res) => {
+  const attendee = db.prepare('SELECT * FROM meeting_attendees WHERE id = ?').get(req.params.attendeeId);
+  if (!attendee) return res.status(404).json({ error: 'Attendee not found' });
+  if (!['pm', 'engineer', 'owner'].includes(req.user.role) && attendee.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Not authorized to modify attendees' });
+  }
+  const { rsvp, attended } = req.body;
+  db.prepare('UPDATE meeting_attendees SET rsvp=COALESCE(?,rsvp), attended=COALESCE(?,attended) WHERE id=?')
+    .run(rsvp || null, attended !== undefined ? (attended ? 1 : 0) : null, attendee.id);
+  res.json(db.prepare('SELECT * FROM meeting_attendees WHERE id = ?').get(attendee.id));
+});
+
+router.delete('/attendees/:attendeeId', requireAuth, (req, res) => {
+  if (!['pm', 'engineer', 'owner'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Not authorized to remove attendees' });
+  }
+  db.prepare('DELETE FROM meeting_attendees WHERE id = ?').run(req.params.attendeeId);
+  res.json({ success: true });
+});
+
+// Convert action item to task
+router.post('/actions/:actionId/convert-to-task', requireAuth, (req, res) => {
+  const action = db.prepare('SELECT mai.*, m.project_id FROM meeting_action_items mai JOIN meetings m ON mai.meeting_id = m.id WHERE mai.id = ?').get(req.params.actionId);
+  if (!action) return res.status(404).json({ error: 'Action item not found' });
+
+  // Get first stage for the project
+  const stage = db.prepare('SELECT id FROM stages WHERE project_id = ? ORDER BY stage_order LIMIT 1').get(action.project_id);
+  if (!stage) return res.status(400).json({ error: 'No stages found for project' });
+
+  const count = db.prepare('SELECT COUNT(*) as c FROM tasks').get().c;
+  const task_code = `TSK-${String(count + 1).padStart(4, '0')}`;
+
+  const result = db.prepare(`INSERT INTO tasks (task_code, stage_id, title, description, assigned_to, status, priority, due_date, created_by) VALUES (?, ?, ?, ?, ?, 'not_started', 'medium', ?, ?)`)
+    .run(task_code, stage.id, action.description, `Converted from meeting action item #${action.id}`, action.assigned_to || null, action.due_date || null, req.user.id);
+
+  // Mark action as completed with reference
+  db.prepare("UPDATE meeting_action_items SET status='completed', completed_at=datetime('now') WHERE id=?").run(action.id);
+
+  res.status(201).json({ task_id: result.lastInsertRowid, task_code });
 });
 
 router.delete('/:id', requireAuth, (req, res) => {

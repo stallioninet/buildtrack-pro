@@ -2,6 +2,8 @@ import { Router } from 'express';
 import db from '../config/db.js';
 import { requireAuth, requireRole, getUserProjectIds } from '../middleware/auth.js';
 import { validateTransition, checkGuards, logAudit } from '../services/workflowEngine.js';
+import { validate, rfiSchema } from '../middleware/validate.js';
+import { generateNextCode } from '../services/codeGenerator.js';
 
 const router = Router();
 
@@ -10,6 +12,31 @@ const VALID_STATUSES = ['Draft', 'Open', 'Responded', 'Closed', 'Void'];
 // GET /api/rfis — list RFIs
 router.get('/', requireAuth, (req, res) => {
   const { project_id, status, priority, stage_id } = req.query;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+  const offset = (page - 1) * limit;
+
+  const conditions = [];
+  const params = [];
+
+  if (project_id) {
+    conditions.push('r.project_id = ?');
+    params.push(project_id);
+  } else {
+    const projectIds = getUserProjectIds(req.user.id, req.user.role);
+    if (projectIds.length === 0) return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+    conditions.push(`r.project_id IN (${projectIds.map(() => '?').join(',')})`);
+    params.push(...projectIds);
+  }
+
+  if (status) { conditions.push('r.status = ?'); params.push(status); }
+  if (priority) { conditions.push('r.priority = ?'); params.push(priority); }
+  if (stage_id) { conditions.push('r.stage_id = ?'); params.push(stage_id); }
+
+  const whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
+
+  const countSql = `SELECT COUNT(*) as total FROM rfis r${whereClause}`;
+  const { total } = db.prepare(countSql).get(...params);
 
   let sql = `
     SELECT r.*, s.name as stage_name, p.name as project_name,
@@ -30,28 +57,10 @@ router.get('/', requireAuth, (req, res) => {
     LEFT JOIN users u1 ON r.raised_by = u1.id
     LEFT JOIN users u2 ON r.response_by = u2.id
     LEFT JOIN tasks t ON r.task_id = t.id
-  `;
-  const conditions = [];
-  const params = [];
+  ${whereClause} ORDER BY CASE r.priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, r.id DESC LIMIT ? OFFSET ?`;
 
-  if (project_id) {
-    conditions.push('r.project_id = ?');
-    params.push(project_id);
-  } else {
-    const projectIds = getUserProjectIds(req.user.id, req.user.role);
-    if (projectIds.length === 0) return res.json([]);
-    conditions.push(`r.project_id IN (${projectIds.map(() => '?').join(',')})`);
-    params.push(...projectIds);
-  }
-
-  if (status) { conditions.push('r.status = ?'); params.push(status); }
-  if (priority) { conditions.push('r.priority = ?'); params.push(priority); }
-  if (stage_id) { conditions.push('r.stage_id = ?'); params.push(stage_id); }
-
-  if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
-  sql += ' ORDER BY CASE r.priority WHEN \'high\' THEN 1 WHEN \'medium\' THEN 2 ELSE 3 END, r.id DESC';
-
-  res.json(db.prepare(sql).all(...params));
+  const data = db.prepare(sql).all(...params, limit, offset);
+  res.json({ data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 
 // GET /api/rfis/summary — RFI stats
@@ -91,20 +100,18 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // POST /api/rfis — create RFI
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, validate(rfiSchema), (req, res) => {
   if (!['pm', 'engineer', 'contractor'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const { project_id, stage_id, task_id, subject, question, drawing_ref, spec_ref, location, priority, due_date } = req.body;
+  const { project_id, stage_id, task_id, subject, question, drawing_ref, spec_ref, location, priority, due_date } = req.validated;
   if (!project_id || !subject || !question) {
     return res.status(400).json({ error: 'project_id, subject, and question are required' });
   }
 
   // Generate RFI code
-  const last = db.prepare("SELECT rfi_code FROM rfis ORDER BY id DESC LIMIT 1").get();
-  const nextNum = last ? parseInt(last.rfi_code.replace('RFI-', '')) + 1 : 1;
-  const code = `RFI-${String(nextNum).padStart(3, '0')}`;
+  const code = generateNextCode('rfis', 'rfi_code', 'RFI');
 
   // Default due date: 14 days from now if not specified
   const safeDueDate = due_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

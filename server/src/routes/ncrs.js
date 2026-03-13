@@ -2,6 +2,9 @@ import { Router } from 'express';
 import db from '../config/db.js';
 import { requireAuth, requireRole, getUserProjectIds } from '../middleware/auth.js';
 import { validateTransition, checkGuards, executePostTransitionActions, logAudit } from '../services/workflowEngine.js';
+import { validate, ncrSchema } from '../middleware/validate.js';
+import { generateNextCode } from '../services/codeGenerator.js';
+import { notifyNCREscalation, notifyStatusChange } from '../services/notificationService.js';
 
 const router = Router();
 
@@ -14,6 +17,32 @@ const DISPOSITIONS = ['Rework', 'Repair', 'Use-As-Is', 'Reject'];
 // GET /api/ncrs — list NCRs
 router.get('/', requireAuth, (req, res) => {
   const { project_id, status, severity, stage_id, assigned_to } = req.query;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+  const offset = (page - 1) * limit;
+
+  const conditions = [];
+  const params = [];
+
+  if (project_id) {
+    conditions.push('n.project_id = ?');
+    params.push(project_id);
+  } else {
+    const projectIds = getUserProjectIds(req.user.id, req.user.role);
+    if (projectIds.length === 0) return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+    conditions.push(`n.project_id IN (${projectIds.map(() => '?').join(',')})`);
+    params.push(...projectIds);
+  }
+
+  if (status) { conditions.push('n.status = ?'); params.push(status); }
+  if (severity) { conditions.push('n.severity = ?'); params.push(severity); }
+  if (stage_id) { conditions.push('n.stage_id = ?'); params.push(stage_id); }
+  if (assigned_to) { conditions.push('n.assigned_to = ?'); params.push(assigned_to); }
+
+  const whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
+
+  const countSql = `SELECT COUNT(*) as total FROM ncrs n${whereClause}`;
+  const { total } = db.prepare(countSql).get(...params);
 
   let sql = `
     SELECT n.*, s.name as stage_name, p.name as project_name,
@@ -27,29 +56,10 @@ router.get('/', requireAuth, (req, res) => {
     LEFT JOIN users u2 ON n.assigned_to = u2.id
     LEFT JOIN tasks t ON n.task_id = t.id
     LEFT JOIN inspections i ON n.inspection_id = i.id
-  `;
-  const conditions = [];
-  const params = [];
+  ${whereClause} ORDER BY CASE n.severity WHEN 'Critical' THEN 1 WHEN 'Major' THEN 2 ELSE 3 END, n.id DESC LIMIT ? OFFSET ?`;
 
-  if (project_id) {
-    conditions.push('n.project_id = ?');
-    params.push(project_id);
-  } else {
-    const projectIds = getUserProjectIds(req.user.id, req.user.role);
-    if (projectIds.length === 0) return res.json([]);
-    conditions.push(`n.project_id IN (${projectIds.map(() => '?').join(',')})`);
-    params.push(...projectIds);
-  }
-
-  if (status) { conditions.push('n.status = ?'); params.push(status); }
-  if (severity) { conditions.push('n.severity = ?'); params.push(severity); }
-  if (stage_id) { conditions.push('n.stage_id = ?'); params.push(stage_id); }
-  if (assigned_to) { conditions.push('n.assigned_to = ?'); params.push(assigned_to); }
-
-  if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
-  sql += ' ORDER BY CASE n.severity WHEN \'Critical\' THEN 1 WHEN \'Major\' THEN 2 ELSE 3 END, n.id DESC';
-
-  res.json(db.prepare(sql).all(...params));
+  const data = db.prepare(sql).all(...params, limit, offset);
+  res.json({ data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 
 // GET /api/ncrs/summary — NCR stats
@@ -90,8 +100,8 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // POST /api/ncrs — create NCR
-router.post('/', requireAuth, requireRole('pm', 'engineer', 'inspector'), (req, res) => {
-  const { project_id, stage_id, task_id, inspection_id, title, description, severity, category, location, is_code_ref, assigned_to, due_date } = req.body;
+router.post('/', requireAuth, validate(ncrSchema), requireRole('pm', 'engineer', 'inspector'), (req, res) => {
+  const { project_id, stage_id, task_id, inspection_id, title, description, severity, category, location, is_code_ref, assigned_to, due_date } = req.validated;
 
   if (!project_id || !title) {
     return res.status(400).json({ error: 'project_id and title are required' });
@@ -101,9 +111,7 @@ router.post('/', requireAuth, requireRole('pm', 'engineer', 'inspector'), (req, 
   const safeCategory = CATEGORIES.includes(category) ? category : 'Workmanship';
 
   // Generate NCR code
-  const last = db.prepare("SELECT ncr_code FROM ncrs ORDER BY id DESC LIMIT 1").get();
-  const nextNum = last ? parseInt(last.ncr_code.replace('NCR-', '')) + 1 : 1;
-  const code = `NCR-${String(nextNum).padStart(3, '0')}`;
+  const code = generateNextCode('ncrs', 'ncr_code', 'NCR');
 
   const result = db.prepare(`
     INSERT INTO ncrs (ncr_code, project_id, stage_id, task_id, inspection_id, title, description, severity, category, location, is_code_ref, status, raised_by, assigned_to, due_date)
@@ -111,6 +119,19 @@ router.post('/', requireAuth, requireRole('pm', 'engineer', 'inspector'), (req, 
   `).run(code, project_id, stage_id || null, task_id || null, inspection_id || null, title, description || null, safeSeverity, safeCategory, location || null, is_code_ref || null, req.user.id, assigned_to || null, due_date || null);
 
   logAudit(project_id, 'ncr', code, null, 'Identified', 'created', req.user.id);
+
+  // Notify for Critical/Major NCRs
+  if (['Critical', 'Major'].includes(safeSeverity)) {
+    notifyNCREscalation({
+      ncrCode: code,
+      ncrTitle: title,
+      ncrId: result.lastInsertRowid,
+      severity: safeSeverity,
+      projectId: project_id,
+      raisedBy: req.user.id,
+      raisedByName: req.user.name,
+    });
+  }
 
   res.status(201).json({ id: result.lastInsertRowid, ncr_code: code });
 });
@@ -185,6 +206,19 @@ router.patch('/:id/status', requireAuth, (req, res) => {
 
   // Post-transition actions
   executePostTransitionActions('ncr', ncr.id, ncr.status, status, req.user.id);
+
+  // Notify project members about status change
+  notifyStatusChange({
+    entityType: 'ncr',
+    entityCode: ncr.ncr_code,
+    entityTitle: ncr.title,
+    entityId: ncr.id,
+    fromStatus: ncr.status,
+    toStatus: status,
+    projectId: ncr.project_id,
+    changedBy: req.user.id,
+    changedByName: req.user.name,
+  });
 
   res.json({ success: true, from: ncr.status, to: status });
 });

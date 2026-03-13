@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
+import { showError, showWarning } from '../utils/toast';
 
 const WEATHER_OPTIONS = ['Sunny', 'Cloudy', 'Rainy', 'Windy', 'Stormy', 'Hot', 'Cold'];
 
@@ -30,7 +31,7 @@ export default function DailyLogsPage() {
     try {
       await api.delete(`/daily-logs/${id}`);
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   if (!currentProject) return <div className="text-center py-12 text-slate-400">Select a project first</div>;
@@ -104,6 +105,7 @@ export default function DailyLogsPage() {
 }
 
 function DailyLogModal({ log, projectId, onClose, onSaved }) {
+  const { currentProject } = useProject();
   const isEdit = !!log;
   const [form, setForm] = useState({
     log_date: log?.log_date || new Date().toISOString().split('T')[0],
@@ -113,9 +115,28 @@ function DailyLogModal({ log, projectId, onClose, onSaved }) {
     issues: log?.issues || '',
   });
   const [saving, setSaving] = useState(false);
+  const [fetchingWeather, setFetchingWeather] = useState(false);
+
+  const handleAutoWeather = async () => {
+    const lat = currentProject?.latitude;
+    const lng = currentProject?.longitude;
+    if (!lat || !lng) {
+      showWarning('Project coordinates not set. Add latitude/longitude to the project settings.');
+      return;
+    }
+    setFetchingWeather(true);
+    try {
+      const weather = await api.get(`/weather?lat=${lat}&lng=${lng}`);
+      setForm(f => ({ ...f, weather: weather.condition }));
+    } catch (err) {
+      showError('Failed to fetch weather: ' + (err.message || 'Unknown error'));
+    } finally {
+      setFetchingWeather(false);
+    }
+  };
 
   const handleSave = async () => {
-    if (!form.log_date) return alert('Date is required');
+    if (!form.log_date) return showWarning('Date is required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -125,7 +146,7 @@ function DailyLogModal({ log, projectId, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     } finally { setSaving(false); }
   };
 
@@ -147,11 +168,18 @@ function DailyLogModal({ log, projectId, onClose, onSaved }) {
             </div>
             <div>
               <label className="text-xs text-slate-500 font-medium">Weather</label>
-              <select value={form.weather} onChange={e => set('weather', e.target.value)}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1">
-                <option value="">Select</option>
-                {WEATHER_OPTIONS.map(w => <option key={w} value={w}>{w}</option>)}
-              </select>
+              <div className="flex gap-2 mt-1">
+                <select value={form.weather} onChange={e => set('weather', e.target.value)}
+                  className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2">
+                  <option value="">Select</option>
+                  {WEATHER_OPTIONS.map(w => <option key={w} value={w}>{w}</option>)}
+                </select>
+                <button type="button" onClick={handleAutoWeather} disabled={fetchingWeather}
+                  className="px-2.5 py-2 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 disabled:opacity-50 whitespace-nowrap"
+                  title="Auto-fill from weather API">
+                  {fetchingWeather ? '...' : 'Auto'}
+                </button>
+              </div>
             </div>
           </div>
           <div>

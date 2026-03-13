@@ -1,38 +1,55 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../api/client';
 import { useProject } from '../../context/ProjectContext';
+import { useApi } from '../../hooks/useApi';
+import { api } from '../../api/client';
 import StatCard from '../../components/ui/StatCard';
 import Badge from '../../components/ui/Badge';
+import {
+  DEFAULT_LAYOUTS, WidgetPicker, renderWidget,
+} from '../../components/shared/DashboardWidgets';
 
 export default function ProcurementDashboard() {
   const { currentProject } = useProject();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const pid = currentProject?.id;
+  const url = pid ? `/dashboard?project_id=${pid}` : '/dashboard';
+  const { data, loading } = useApi(url);
+  const [layout, setLayout] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
-    const pid = currentProject?.id;
-    const url = pid ? `/dashboard?project_id=${pid}` : '/dashboard';
-    setLoading(true);
-    api.get(url).then(setData).catch(console.error).finally(() => setLoading(false));
-  }, [currentProject?.id]);
+    api.get('/dashboard/layout')
+      .then(res => setLayout(res?.layout || DEFAULT_LAYOUTS.procurement))
+      .catch(() => setLayout(DEFAULT_LAYOUTS.procurement));
+  }, []);
 
-  if (loading) return <div className="text-center py-12 text-slate-500">Loading dashboard...</div>;
+  if (loading || !layout) return <div className="text-center py-12 text-slate-500">Loading dashboard...</div>;
   if (!data) return <div className="text-center py-12 text-red-500">Failed to load dashboard</div>;
 
   const { stats, recentRequests, inventory } = data;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Procurement Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1">Materials, vendors, and inventory</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Procurement Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">Materials, vendors, and inventory</p>
+        </div>
+        <button onClick={() => setShowPicker(true)}
+          className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center gap-1.5">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Customize
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="Pending Requests" value={stats?.pendingRequests || 0} color="yellow" />
-        <StatCard label="Active Vendors" value={stats?.activeVendors || 0} color="blue" />
-        <StatCard label="Low Stock Items" value={stats?.lowStockItems || 0} color="red" />
-      </div>
+      {layout.includes('stat_cards') && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatCard label="Pending Requests" value={stats?.pendingRequests || 0} color="yellow" />
+          <StatCard label="Active Vendors" value={stats?.activeVendors || 0} color="blue" />
+          <StatCard label="Low Stock Items" value={stats?.lowStockItems || 0} color="red" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -68,6 +85,22 @@ export default function ProcurementDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Extra widgets from layout */}
+      {layout.filter(id => id !== 'stat_cards' && id !== 'material_requests').length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {layout.filter(id => id !== 'stat_cards' && id !== 'material_requests').map(widgetId => renderWidget(widgetId, data))}
+        </div>
+      )}
+
+      {showPicker && (
+        <WidgetPicker
+          currentLayout={layout}
+          role="procurement"
+          onSave={(newLayout) => { setLayout(newLayout); setShowPicker(false); }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
     </div>
   );
 }

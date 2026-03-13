@@ -6,7 +6,7 @@ export function requireAuth(req, res, next) {
   }
 
   const user = db.prepare(`
-    SELECT u.id, u.email, u.name, u.owner_type, u.created_by,
+    SELECT u.id, u.email, u.name, u.phone, u.owner_type, u.created_by, u.created_at,
            r.name as role, r.display_name as roleDisplayName, r.avatar_code as avatarCode
     FROM users u
     JOIN roles r ON u.role_id = r.id

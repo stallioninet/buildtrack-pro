@@ -6,6 +6,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { errorHandler } from './middleware/errorHandler.js';
+import { apiLimiter, uploadLimiter } from './middleware/rateLimiter.js';
+import { requestLogger, logger } from './middleware/logger.js';
+import { csrfProtection, generateCsrfToken } from './middleware/csrf.js';
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import projectRoutes from './routes/projects.js';
@@ -34,6 +37,12 @@ import documentRoutes from './routes/documents.js';
 import submittalRoutes from './routes/submittals.js';
 import meetingRoutes from './routes/meetings.js';
 import searchRoutes from './routes/search.js';
+import punchListRoutes from './routes/punchLists.js';
+import activityFeedRoutes from './routes/activityFeed.js';
+import weatherRoutes from './routes/weather.js';
+import resourceRoutes from './routes/resources.js';
+import bidRoutes from './routes/bids.js';
+import sovRoutes from './routes/sov.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SQLiteStore = connectSqlite3(session);
@@ -52,9 +61,30 @@ app.use(cors({
     : ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
-// Health check
+// General API rate limiter
+app.use('/api/', apiLimiter);
+
+// Upload rate limiter
+app.use('/api/tasks/:taskId/attachments', uploadLimiter);
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (isProd) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// Request logging
+app.use(requestLogger);
+
+// Health check (before session/csrf)
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // Session
@@ -73,6 +103,17 @@ app.use(session({
     sameSite: isProd ? 'none' : 'lax',
   },
 }));
+
+// CSRF protection — generate token on session, validate on mutations
+// Skip for auth routes (login/register need to work without token)
+app.use(generateCsrfToken);
+app.use('/api', (req, res, next) => {
+  // Skip CSRF for auth login/register/logout (no session token yet)
+  if (req.path.startsWith('/auth/login') || req.path.startsWith('/auth/register') || req.path.startsWith('/auth/logout') || req.path.startsWith('/auth/forgot-password') || req.path.startsWith('/auth/reset-password')) {
+    return next();
+  }
+  csrfProtection(req, res, next);
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -103,6 +144,12 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/submittals', submittalRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/punch-lists', punchListRoutes);
+app.use('/api/activity-feed', activityFeedRoutes);
+app.use('/api/weather', weatherRoutes);
+app.use('/api/resources', resourceRoutes);
+app.use('/api/bids', bidRoutes);
+app.use('/api/sov', sovRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
@@ -116,6 +163,9 @@ if (process.env.NODE_ENV === 'production') {
 // Error handler
 app.use(errorHandler);
 
+// Export app for testing
+export { app };
+
 app.listen(PORT, () => {
-  console.log(`BuildTrack server running on http://localhost:${PORT}`);
+  logger.info('BuildTrack server running', { port: PORT });
 });

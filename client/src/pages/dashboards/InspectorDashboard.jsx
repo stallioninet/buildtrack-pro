@@ -5,13 +5,8 @@ import { useProject } from '../../context/ProjectContext';
 import StatCard from '../../components/ui/StatCard';
 import Badge from '../../components/ui/Badge';
 import { formatDate } from '../../utils/formatters';
-
-const SEVERITY_COLORS = {
-  Critical: 'bg-red-600 text-white',
-  High: 'bg-red-100 text-red-800',
-  Medium: 'bg-yellow-100 text-yellow-800',
-  Low: 'bg-slate-100 text-slate-600',
-};
+import { DEFECT_SEVERITY_COLORS as SEVERITY_COLORS } from '../../config/constants';
+import { DEFAULT_LAYOUTS, WidgetPicker } from '../../components/shared/DashboardWidgets';
 
 export default function InspectorDashboard() {
   const { currentProject } = useProject();
@@ -21,6 +16,14 @@ export default function InspectorDashboard() {
   const [recentInsp, setRecentInsp] = useState([]);
   const [recentDefects, setRecentDefects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [layout, setLayout] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
+
+  useEffect(() => {
+    api.get('/dashboard/layout')
+      .then(res => setLayout(res?.layout || DEFAULT_LAYOUTS.inspector))
+      .catch(() => setLayout(DEFAULT_LAYOUTS.inspector));
+  }, []);
 
   useEffect(() => {
     const pid = currentProject?.id;
@@ -47,9 +50,18 @@ export default function InspectorDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Quality Inspector Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1">{currentProject?.name || 'All Projects'} · Inspections and defect tracking</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Quality Inspector Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">{currentProject?.name || 'All Projects'} · Inspections and defect tracking</p>
+        </div>
+        <button onClick={() => setShowPicker(true)}
+          className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center gap-1.5">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Customize
+        </button>
       </div>
 
       {/* Stats */}
@@ -150,6 +162,15 @@ export default function InspectorDashboard() {
           </div>
         </div>
       </div>
+
+      {showPicker && (
+        <WidgetPicker
+          currentLayout={layout || DEFAULT_LAYOUTS.inspector}
+          role="inspector"
+          onSave={(newLayout) => { setLayout(newLayout); setShowPicker(false); }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import db from '../config/db.js';
 import { requireAuth, requireRole, getUserProjectIds, getProjectStageIds } from '../middleware/auth.js';
+import { notifyTaskAssignment, notifyStatusChange } from '../services/notificationService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(__dirname, '../../data/uploads');
@@ -24,15 +25,10 @@ const VALID_TRANSITIONS = {
 router.get('/', requireAuth, (req, res) => {
   const { stage_id, status, priority, assigned_to, project_id, flat } = req.query;
   const role = req.user.role;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+  const offset = (page - 1) * limit;
 
-  let sql = `
-    SELECT t.*, s.name as stage_name, s.project_id,
-           a.name as assigned_to_name, c.name as created_by_name
-    FROM tasks t
-    LEFT JOIN stages s ON t.stage_id = s.id
-    LEFT JOIN users a ON t.assigned_to = a.id
-    LEFT JOIN users c ON t.created_by = c.id
-  `;
   const conditions = [];
   const params = [];
 
@@ -47,7 +43,7 @@ router.get('/', requireAuth, (req, res) => {
       conditions.push(`s.project_id IN (${ph})`);
       params.push(...projectIds);
     } else {
-      return res.json([]);
+      return res.json({ data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
     }
   }
 
@@ -74,55 +70,103 @@ router.get('/', requireAuth, (req, res) => {
     params.push(assigned_to);
   }
 
-  if (conditions.length > 0) {
-    sql += ' WHERE ' + conditions.join(' AND ');
-  }
-  sql += ' ORDER BY t.stage_id, t.id ASC';
+  const whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
 
-  const allTasks = db.prepare(sql).all(...params);
+  // Helper to batch-enrich tasks with attachment/inspection data
+  const enrichTasks = (tasks) => {
+    if (tasks.length === 0) return;
+    const taskIds = tasks.map(t => t.id);
+    const taskPh = taskIds.map(() => '?').join(',');
 
-  // Add attachment counts and inspection link counts
-  const attCountStmt = db.prepare('SELECT COUNT(*) as c FROM task_attachments WHERE task_id = ?');
-  const inspCountStmt = db.prepare('SELECT COUNT(*) as c FROM task_inspections WHERE task_id = ?');
-  const inspRequiredPassStmt = db.prepare(`
-    SELECT ti.link_type, i.status as insp_status, i.result as insp_result
-    FROM task_inspections ti
-    JOIN inspections i ON ti.inspection_id = i.id
-    WHERE ti.task_id = ? AND ti.link_type = 'required'
-  `);
-  for (const t of allTasks) {
-    t.attachment_count = attCountStmt.get(t.id)?.c || 0;
-    t.inspection_count = inspCountStmt.get(t.id)?.c || 0;
-    // Check if all required inspections passed
-    if (t.inspection_count > 0) {
-      const required = inspRequiredPassStmt.all(t.id);
-      if (required.length > 0) {
+    const attCounts = db.prepare(`SELECT task_id, COUNT(*) as c FROM task_attachments WHERE task_id IN (${taskPh}) GROUP BY task_id`).all(...taskIds);
+    const attMap = Object.fromEntries(attCounts.map(r => [r.task_id, r.c]));
+
+    const inspCounts = db.prepare(`SELECT task_id, COUNT(*) as c FROM task_inspections WHERE task_id IN (${taskPh}) GROUP BY task_id`).all(...taskIds);
+    const inspMap = Object.fromEntries(inspCounts.map(r => [r.task_id, r.c]));
+
+    const inspDetails = db.prepare(`SELECT ti.task_id, ti.link_type, i.status as insp_status, i.result as insp_result FROM task_inspections ti JOIN inspections i ON ti.inspection_id = i.id WHERE ti.task_id IN (${taskPh}) AND ti.link_type = 'required'`).all(...taskIds);
+    const inspDetailMap = {};
+    for (const r of inspDetails) {
+      if (!inspDetailMap[r.task_id]) inspDetailMap[r.task_id] = [];
+      inspDetailMap[r.task_id].push(r);
+    }
+
+    for (const t of tasks) {
+      t.attachment_count = attMap[t.id] || 0;
+      t.inspection_count = inspMap[t.id] || 0;
+      if (t.inspection_count > 0 && inspDetailMap[t.id]) {
+        const required = inspDetailMap[t.id];
         const allPassed = required.every(r => r.insp_status === 'Completed' && (r.insp_result === 'Pass' || r.insp_result === 'Conditional'));
         const anyFailed = required.some(r => r.insp_result === 'Fail');
         t.inspection_gate = anyFailed ? 'blocked' : allPassed ? 'clear' : 'pending';
       }
     }
-  }
+  };
 
-  // If flat mode requested, return as-is
+  // If flat mode requested, paginate all tasks directly
   if (flat === '1') {
-    return res.json(allTasks);
+    const countSql = `SELECT COUNT(*) as total FROM tasks t LEFT JOIN stages s ON t.stage_id = s.id${whereClause}`;
+    const { total } = db.prepare(countSql).get(...params);
+
+    const sql = `SELECT t.*, s.name as stage_name, s.project_id,
+           a.name as assigned_to_name, c.name as created_by_name
+    FROM tasks t
+    LEFT JOIN stages s ON t.stage_id = s.id
+    LEFT JOIN users a ON t.assigned_to = a.id
+    LEFT JOIN users c ON t.created_by = c.id${whereClause} ORDER BY t.stage_id, t.id ASC LIMIT ? OFFSET ?`;
+    const allTasks = db.prepare(sql).all(...params, limit, offset);
+    enrichTasks(allTasks);
+    return res.json({ data: allTasks, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   }
 
-  // Build hierarchical structure: parent tasks with subtasks nested
-  const parentTasks = allTasks.filter(t => !t.parent_task_id);
-  const subtaskMap = {};
-  for (const t of allTasks) {
-    if (t.parent_task_id) {
+  // Hierarchical mode: paginate by parent tasks only
+  const parentWhereClause = whereClause
+    ? whereClause + ' AND t.parent_task_id IS NULL'
+    : ' WHERE t.parent_task_id IS NULL';
+
+  const countSql = `SELECT COUNT(*) as total FROM tasks t LEFT JOIN stages s ON t.stage_id = s.id${parentWhereClause}`;
+  const { total } = db.prepare(countSql).get(...params);
+
+  const parentSql = `SELECT t.*, s.name as stage_name, s.project_id,
+           a.name as assigned_to_name, c.name as created_by_name
+    FROM tasks t
+    LEFT JOIN stages s ON t.stage_id = s.id
+    LEFT JOIN users a ON t.assigned_to = a.id
+    LEFT JOIN users c ON t.created_by = c.id${parentWhereClause} ORDER BY t.stage_id, t.id ASC LIMIT ? OFFSET ?`;
+  const parentTasks = db.prepare(parentSql).all(...params, limit, offset);
+  enrichTasks(parentTasks);
+
+  // Fetch subtasks for the returned parent tasks
+  if (parentTasks.length > 0) {
+    const parentIds = parentTasks.map(p => p.id);
+    const subPh = parentIds.map(() => '?').join(',');
+    const subtasks = db.prepare(`
+      SELECT t.*, s.name as stage_name, s.project_id,
+             a.name as assigned_to_name, c.name as created_by_name
+      FROM tasks t
+      LEFT JOIN stages s ON t.stage_id = s.id
+      LEFT JOIN users a ON t.assigned_to = a.id
+      LEFT JOIN users c ON t.created_by = c.id
+      WHERE t.parent_task_id IN (${subPh})
+      ORDER BY t.id ASC
+    `).all(...parentIds);
+    enrichTasks(subtasks);
+
+    const subtaskMap = {};
+    for (const t of subtasks) {
       if (!subtaskMap[t.parent_task_id]) subtaskMap[t.parent_task_id] = [];
       subtaskMap[t.parent_task_id].push(t);
     }
-  }
-  for (const p of parentTasks) {
-    p.subtasks = subtaskMap[p.id] || [];
+    for (const p of parentTasks) {
+      p.subtasks = subtaskMap[p.id] || [];
+    }
+  } else {
+    for (const p of parentTasks) {
+      p.subtasks = [];
+    }
   }
 
-  res.json(parentTasks);
+  res.json({ data: parentTasks, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 
 // GET /api/tasks/summary/counts — task stats, scoped by project
@@ -257,6 +301,17 @@ router.post('/', requireAuth, requireRole('pm', 'engineer', 'owner'), (req, res)
     WHERE t.id = ?
   `).get(result.lastInsertRowid);
 
+  if (assigned_to) {
+    notifyTaskAssignment({
+      taskCode: task.task_code,
+      taskTitle: title,
+      taskId: task.id,
+      assigneeId: assigned_to,
+      assignerId: req.user.id,
+      assignerName: req.user.name,
+    });
+  }
+
   res.status(201).json(task);
 });
 
@@ -295,7 +350,7 @@ router.patch('/:id', requireAuth, requireRole('pm', 'engineer', 'owner'), (req, 
 
 // PATCH /api/tasks/:id/status — change status
 router.patch('/:id/status', requireAuth, (req, res) => {
-  const { status, force } = req.body;
+  const { status, force, note } = req.body;
   const validStatuses = ['not_started', 'in_progress', 'on_hold', 'ready_for_inspection', 'rework', 'completed'];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: 'Invalid status. Must be: not_started, in_progress, on_hold, ready_for_inspection, rework, completed' });
@@ -303,6 +358,11 @@ router.patch('/:id/status', requireAuth, (req, res) => {
 
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
+
+  // No-op if status unchanged
+  if (task.status === status) {
+    return res.json(task);
+  }
 
   const role = req.user.role;
 
@@ -381,10 +441,16 @@ router.patch('/:id/status', requireAuth, (req, res) => {
 
   // Audit log for status change
   const stage = db.prepare('SELECT project_id FROM stages WHERE id = ?').get(task.stage_id);
-  db.prepare(`INSERT INTO audit_log (project_id, entity, entity_id, from_state, to_state, action, user_id, user_display, type) VALUES (?, 'task', ?, ?, ?, 'status_change', ?, ?, 'workflow')`).run(stage?.project_id, task.task_code, task.status, status, req.user.id, req.user.name);
+  const noteDetail = note ? ` — Note: ${note}` : '';
+  db.prepare(`INSERT INTO audit_log (project_id, entity, entity_id, from_state, to_state, action, user_id, user_display, details, type) VALUES (?, 'task', ?, ?, ?, 'status_change', ?, ?, ?, 'workflow')`).run(stage?.project_id, task.task_code, task.status, status, req.user.id, req.user.name, `Status changed from ${task.status} to ${status}${noteDetail}`);
+
+  // Add a comment if a note was provided
+  if (note && note.trim()) {
+    db.prepare("INSERT INTO comments (entity_type, entity_id, user_id, content, created_at) VALUES ('task', ?, ?, ?, datetime('now'))").run(task.id, req.user.id, `[Status → ${status}] ${note.trim()}`);
+  }
 
   const updated = db.prepare(`
-    SELECT t.*, s.name as stage_name,
+    SELECT t.*, s.name as stage_name, s.project_id,
            a.name as assigned_to_name, c.name as created_by_name
     FROM tasks t
     LEFT JOIN stages s ON t.stage_id = s.id
@@ -392,6 +458,21 @@ router.patch('/:id/status', requireAuth, (req, res) => {
     LEFT JOIN users c ON t.created_by = c.id
     WHERE t.id = ?
   `).get(req.params.id);
+
+  // Notify project members about status change
+  if (updated && updated.project_id) {
+    notifyStatusChange({
+      entityType: 'task',
+      entityCode: updated.task_code,
+      entityTitle: updated.title,
+      entityId: updated.id,
+      fromStatus: task.status,
+      toStatus: status,
+      projectId: updated.project_id,
+      changedBy: req.user.id,
+      changedByName: req.user.name,
+    });
+  }
 
   res.json(updated);
 });
@@ -419,6 +500,75 @@ router.delete('/:id', requireAuth, requireRole('pm', 'engineer', 'owner'), (req,
   db.prepare('DELETE FROM tasks WHERE id = ?').run(task.id);
 
   res.json({ success: true });
+});
+
+// POST /api/tasks/bulk — bulk operations (PM, engineer, owner)
+router.post('/bulk', requireAuth, requireRole('pm', 'engineer', 'owner'), (req, res) => {
+  const { action, task_ids, status, assigned_to, priority, note } = req.body;
+
+  if (!action || !task_ids || !Array.isArray(task_ids) || task_ids.length === 0) {
+    return res.status(400).json({ error: 'action and task_ids[] are required' });
+  }
+
+  if (task_ids.length > 100) {
+    return res.status(400).json({ error: 'Maximum 100 tasks per bulk operation' });
+  }
+
+  const ph = task_ids.map(() => '?').join(',');
+  const tasks = db.prepare(`SELECT id, task_code, status, stage_id FROM tasks WHERE id IN (${ph})`).all(...task_ids);
+
+  if (tasks.length === 0) {
+    return res.status(404).json({ error: 'No matching tasks found' });
+  }
+
+  let updated = 0;
+
+  if (action === 'status' && status) {
+    const validStatuses = ['not_started', 'in_progress', 'on_hold', 'ready_for_inspection', 'rework', 'completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const updateStmt = db.prepare("UPDATE tasks SET status = ?, updated_at = datetime('now') WHERE id = ?");
+    const auditStmt = db.prepare("INSERT INTO audit_log (project_id, entity, entity_id, from_state, to_state, action, user_id, user_display, details, type) VALUES (?, 'task', ?, ?, ?, 'bulk_status_change', ?, ?, ?, 'workflow')");
+
+    for (const task of tasks) {
+      updateStmt.run(status, task.id);
+      const stage = db.prepare('SELECT project_id FROM stages WHERE id = ?').get(task.stage_id);
+      auditStmt.run(stage?.project_id, task.task_code, task.status, status, req.user.id, req.user.name, `Bulk status change to ${status}`);
+      updated++;
+    }
+  } else if (action === 'assign' && assigned_to) {
+    const updateStmt = db.prepare("UPDATE tasks SET assigned_to = ?, updated_at = datetime('now') WHERE id = ?");
+    for (const task of tasks) {
+      updateStmt.run(assigned_to, task.id);
+      updated++;
+    }
+  } else if (action === 'priority' && priority) {
+    const validPriorities = ['low', 'medium', 'high', 'critical'];
+    if (!validPriorities.includes(priority)) {
+      return res.status(400).json({ error: 'Invalid priority' });
+    }
+    const updateStmt = db.prepare("UPDATE tasks SET priority = ?, updated_at = datetime('now') WHERE id = ?");
+    for (const task of tasks) {
+      updateStmt.run(priority, task.id);
+      updated++;
+    }
+  } else if (action === 'delete') {
+    for (const task of tasks) {
+      const subtaskIds = db.prepare('SELECT id FROM tasks WHERE parent_task_id = ?').all(task.id).map(t => t.id);
+      const allIds = [task.id, ...subtaskIds];
+      const idsPh = allIds.map(() => '?').join(',');
+      db.prepare(`DELETE FROM task_attachments WHERE task_id IN (${idsPh})`).run(...allIds);
+      db.prepare('DELETE FROM tasks WHERE parent_task_id = ?').run(task.id);
+      db.prepare('DELETE FROM tasks WHERE id = ?').run(task.id);
+      updated++;
+    }
+  } else {
+    return res.status(400).json({ error: 'Invalid action. Must be: status, assign, priority, delete' });
+  }
+
+  res.json({ success: true, updated });
 });
 
 // ==================== TASK-INSPECTION LINKS ====================

@@ -1,19 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/formatters';
+import { showError } from '../../utils/toast';
+import { ROLE_COLORS } from '../../config/constants';
 
-const ROLE_COLORS = {
-  owner: 'bg-purple-100 text-purple-700',
-  pm: 'bg-blue-100 text-blue-700',
-  engineer: 'bg-green-100 text-green-700',
-  contractor: 'bg-orange-100 text-orange-700',
-  inspector: 'bg-teal-100 text-teal-700',
-  procurement: 'bg-yellow-100 text-yellow-700',
-  accounts: 'bg-pink-100 text-pink-700',
-};
-
-export default function CommentsSection({ entityType, entityId }) {
+function CommentsSection({ entityType, entityId }) {
   const { user } = useAuth();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -28,7 +20,7 @@ export default function CommentsSection({ entityType, entityId }) {
 
   useEffect(() => { loadComments(); }, [entityType, entityId]);
 
-  const handlePost = async () => {
+  const handlePost = useCallback(async () => {
     if (!newComment.trim()) return;
     setPosting(true);
     try {
@@ -36,24 +28,29 @@ export default function CommentsSection({ entityType, entityId }) {
       setNewComment('');
       loadComments();
     } catch (err) {
-      alert(err.message || 'Failed to post comment');
+      showError(err.message || 'Failed to post comment');
     } finally { setPosting(false); }
-  };
+  }, [newComment, entityType, entityId]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     if (!confirm('Delete this comment?')) return;
+    // Optimistically remove the comment immediately
+    setComments(prev => prev.filter(c => c.id !== id));
     try {
       await api.delete(`/comments/${id}`);
+    } catch (err) {
+      showError(err.message || 'Delete failed, restoring comment');
+      // Reload comments to restore state on failure
       loadComments();
-    } catch (err) { alert(err.message); }
-  };
+    }
+  }, [entityType, entityId]);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handlePost();
     }
-  };
+  }, [handlePost]);
 
   return (
     <div className="border-t pt-4 mt-4">
@@ -97,6 +94,7 @@ export default function CommentsSection({ entityType, entityId }) {
 
       <div className="flex gap-2">
         <textarea
+          aria-label="Add a comment"
           value={newComment}
           onChange={e => setNewComment(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -112,3 +110,5 @@ export default function CommentsSection({ entityType, entityId }) {
     </div>
   );
 }
+
+export default memo(CommentsSection);

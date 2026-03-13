@@ -3,21 +3,13 @@ import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
+import { showError, showWarning } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
-
-const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-600',
-  Open: 'bg-blue-100 text-blue-700',
-  Responded: 'bg-green-100 text-green-700',
-  Closed: 'bg-slate-200 text-slate-500',
-  Void: 'bg-red-100 text-red-500',
-};
-
-const PRIORITY_COLORS = {
-  high: 'bg-red-50 text-red-700 border-red-200',
-  medium: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  low: 'bg-slate-50 text-slate-600 border-slate-200',
-};
+import Pagination from '../components/ui/Pagination';
+import FormInput from '../components/ui/FormInput';
+import useFormValidation from '../hooks/useFormValidation';
+import { RFI_STATUS_COLORS as STATUS_COLORS, PRIORITY_COLORS_BORDERED as PRIORITY_COLORS } from '../config/constants';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 const STATUSES = ['Draft', 'Open', 'Responded', 'Closed', 'Void'];
 
@@ -28,6 +20,8 @@ export default function RFIsPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '' });
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedRFI, setSelectedRFI] = useState(null);
   const [showResponseModal, setShowResponseModal] = useState(null);
@@ -40,15 +34,21 @@ export default function RFIsPage() {
     if (!currentProject?.id) return;
     const pid = currentProject.id;
     Promise.all([
-      api.get(`/rfis?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}`),
+      api.get(`/rfis?project_id=${pid}${filter.status ? `&status=${filter.status}` : ''}&page=${page}&limit=50`),
       api.get(`/rfis/summary?project_id=${pid}`),
     ]).then(([rfisData, summaryData]) => {
-      setRFIs(rfisData);
+      if (rfisData && rfisData.data) {
+        setRFIs(rfisData.data);
+        setPagination(rfisData.pagination);
+      } else {
+        setRFIs(Array.isArray(rfisData) ? rfisData : []);
+        setPagination(null);
+      }
       setSummary(summaryData);
     }).catch(console.error).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, [currentProject?.id, filter]);
+  useEffect(() => { loadData(); }, [currentProject?.id, filter, page]);
 
   useEffect(() => {
     if (!currentProject?.id) return;
@@ -60,7 +60,7 @@ export default function RFIsPage() {
       await api.patch(`/rfis/${rfi.id}/status`, { status: newStatus });
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -106,7 +106,7 @@ export default function RFIsPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2">
-        <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
+        <select value={filter.status} onChange={e => { setFilter(f => ({ ...f, status: e.target.value })); setPage(1); }}
           className="text-xs border border-slate-200 rounded-lg px-3 py-1.5">
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -115,11 +115,12 @@ export default function RFIsPage() {
 
       {/* RFI List */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400 text-sm">Loading RFIs...</div>
+        <SkeletonTable rows={6} />
       ) : rfis.length === 0 ? (
         <div className="text-center py-12 text-slate-400 text-sm">No RFIs found</div>
       ) : (
         <div className="space-y-3">
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
           {rfis.map(rfi => (
             <div key={rfi.id} className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-shadow ${rfi.is_overdue ? 'border-red-200' : 'border-slate-200'}`}>
               <div className="flex items-start justify-between gap-3">
@@ -179,6 +180,7 @@ export default function RFIsPage() {
               </div>
             </div>
           ))}
+          <Pagination page={page} totalPages={pagination?.totalPages || 1} total={pagination?.total || 0} onPageChange={setPage} />
         </div>
       )}
 
@@ -218,9 +220,13 @@ function RFIModal({ rfi, projectId, stages, onClose, onSaved }) {
     due_date: rfi?.due_date || '',
   });
   const [saving, setSaving] = useState(false);
+  const { errors, validate, clearError } = useFormValidation({
+    subject: { required: true, label: 'Subject', minLength: 3 },
+    question: { required: true, label: 'Question', minLength: 3 },
+  });
 
   const handleSave = async () => {
-    if (!form.subject.trim() || !form.question.trim()) return alert('Subject and question are required');
+    if (!validate(form)) return;
     setSaving(true);
     try {
       if (isEdit) {
@@ -230,7 +236,7 @@ function RFIModal({ rfi, projectId, stages, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save RFI');
+      showError(err.message || 'Failed to save RFI');
     } finally {
       setSaving(false);
     }
@@ -249,19 +255,15 @@ function RFIModal({ rfi, projectId, stages, onClose, onSaved }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div>
-            <label className="text-xs text-slate-500 font-medium">Subject *</label>
-            <input type="text" value={form.subject} onChange={e => set('subject', e.target.value)}
-              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1"
-              placeholder="Clear, concise subject line" />
-          </div>
+          <FormInput label="Subject" required name="subject" value={form.subject}
+            onChange={e => { set('subject', e.target.value); clearError('subject'); }}
+            error={errors.subject}
+            placeholder="Clear, concise subject line" />
 
-          <div>
-            <label className="text-xs text-slate-500 font-medium">Question *</label>
-            <textarea value={form.question} onChange={e => set('question', e.target.value)}
-              rows={4} className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1"
-              placeholder="Detailed question with reference to drawing/spec number and location" />
-          </div>
+          <FormInput label="Question" required name="question" type="textarea" value={form.question}
+            onChange={e => { set('question', e.target.value); clearError('question'); }}
+            error={errors.question} rows={4}
+            placeholder="Detailed question with reference to drawing/spec number and location" />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -332,13 +334,13 @@ function ResponseModal({ rfi, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
-    if (!response.trim()) return alert('Response is required');
+    if (!response.trim()) return showWarning('Response is required');
     setSaving(true);
     try {
       await api.patch(`/rfis/${rfi.id}/respond`, { response, cost_impact: costImpact || null, schedule_impact: scheduleImpact || null });
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to submit response');
+      showError(err.message || 'Failed to submit response');
     } finally {
       setSaving(false);
     }

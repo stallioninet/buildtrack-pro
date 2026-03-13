@@ -4,19 +4,9 @@ import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import StatCard from '../components/ui/StatCard';
+import { showError, showWarning } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
-
-const STATUSES = ['Draft', 'Submitted', 'Under Review', 'Verified', 'Approved', 'Paid', 'Rejected'];
-
-const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-700',
-  Submitted: 'bg-blue-100 text-blue-700',
-  'Under Review': 'bg-amber-100 text-amber-700',
-  Verified: 'bg-purple-100 text-purple-700',
-  Approved: 'bg-green-100 text-green-700',
-  Paid: 'bg-emerald-100 text-emerald-700',
-  Rejected: 'bg-red-100 text-red-700',
-};
+import { RA_BILL_STATUSES as STATUSES, RA_BILL_STATUS_COLORS as STATUS_COLORS } from '../config/constants';
 
 export default function RABillsPage() {
   const { currentProject } = useProject();
@@ -63,7 +53,7 @@ export default function RABillsPage() {
       loadBills();
       loadSummary();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -74,7 +64,7 @@ export default function RABillsPage() {
       loadBills();
       loadSummary();
     } catch (err) {
-      alert(err.message || 'Failed to delete bill');
+      showError(err.message || 'Failed to delete bill');
     }
   };
 
@@ -100,7 +90,7 @@ export default function RABillsPage() {
       loadBills();
       loadSummary();
     } catch (err) {
-      alert(err.message || 'Failed to save RA Bill');
+      showError(err.message || 'Failed to save RA Bill');
     }
   };
 
@@ -265,7 +255,7 @@ function RABillModal({ bill, vendors, onSave, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title) {
-      alert('Title is required');
+      showWarning('Title is required');
       return;
     }
     onSave({

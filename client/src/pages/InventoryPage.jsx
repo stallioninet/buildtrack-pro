@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import ProgressBar from '../components/ui/ProgressBar';
+import { showError, showWarning } from '../utils/toast';
 
 export default function InventoryPage() {
   const { currentProject } = useProject();
@@ -28,7 +29,7 @@ export default function InventoryPage() {
     try {
       await api.delete(`/inventory/${id}`);
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { showError(err.message); }
   };
 
   if (!currentProject) return <div className="text-center py-12 text-slate-400">Select a project first</div>;
@@ -128,7 +129,7 @@ function InventoryModal({ item, projectId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.material.trim() || !form.unit.trim()) return alert('Material and unit are required');
+    if (!form.material.trim() || !form.unit.trim()) return showWarning('Material and unit are required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -149,7 +150,7 @@ function InventoryModal({ item, projectId, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save');
+      showError(err.message || 'Failed to save');
     } finally { setSaving(false); }
   };
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const DEMO_ACCOUNTS = [
@@ -117,6 +117,11 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 required
               />
+            </div>
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
+                Forgot password?
+              </Link>
             </div>
             <button
               type="submit"

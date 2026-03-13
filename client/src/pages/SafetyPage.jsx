@@ -4,46 +4,15 @@ import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/formatters';
 import StatCard from '../components/ui/StatCard';
+import { showError, showWarning } from '../utils/toast';
 import CommentsSection from '../components/shared/CommentsSection';
-
-const PERMIT_TYPES = ['Hot Work', 'Confined Space', 'Height Work', 'Excavation', 'Electrical', 'General'];
-const PERMIT_STATUSES = ['Draft', 'Submitted', 'Approved', 'Active', 'Suspended', 'Closed', 'Expired'];
-const RISK_LEVELS = ['low', 'medium', 'high', 'critical'];
-
-const INCIDENT_TYPES = ['Injury', 'Near Miss', 'Property Damage', 'Environmental', 'Fire', 'Collapse'];
-const INCIDENT_SEVERITIES = ['minor', 'moderate', 'serious', 'fatal'];
-const INCIDENT_STATUSES = ['Reported', 'Under Investigation', 'Action Required', 'Closed'];
-
-const PERMIT_STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-600',
-  Submitted: 'bg-blue-100 text-blue-700',
-  Approved: 'bg-green-100 text-green-700',
-  Active: 'bg-emerald-100 text-emerald-700',
-  Suspended: 'bg-amber-100 text-amber-700',
-  Closed: 'bg-slate-200 text-slate-500',
-  Expired: 'bg-red-100 text-red-500',
-};
-
-const INCIDENT_STATUS_COLORS = {
-  Reported: 'bg-blue-100 text-blue-700',
-  'Under Investigation': 'bg-amber-100 text-amber-700',
-  'Action Required': 'bg-orange-100 text-orange-700',
-  Closed: 'bg-green-100 text-green-700',
-};
-
-const RISK_COLORS = {
-  low: 'bg-green-50 text-green-700 border-green-200',
-  medium: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  high: 'bg-orange-50 text-orange-700 border-orange-200',
-  critical: 'bg-red-50 text-red-700 border-red-200',
-};
-
-const SEVERITY_COLORS = {
-  minor: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  moderate: 'bg-orange-50 text-orange-700 border-orange-200',
-  serious: 'bg-red-50 text-red-700 border-red-200',
-  fatal: 'bg-red-100 text-red-800 border-red-300',
-};
+import {
+  PERMIT_TYPES, PERMIT_STATUSES, RISK_LEVELS,
+  INCIDENT_TYPES, INCIDENT_SEVERITIES, INCIDENT_STATUSES,
+  PERMIT_STATUS_COLORS, INCIDENT_STATUS_COLORS, RISK_COLORS,
+  INCIDENT_SEVERITY_COLORS as SEVERITY_COLORS,
+} from '../config/constants';
+import { useModal } from '../hooks/useModal';
 
 export default function SafetyPage() {
   const { currentProject } = useProject();
@@ -55,9 +24,7 @@ export default function SafetyPage() {
   const [loading, setLoading] = useState(true);
   const [permitFilter, setPermitFilter] = useState({ status: '' });
   const [incidentFilter, setIncidentFilter] = useState({ status: '' });
-  const [showModal, setShowModal] = useState(false);
-  const [selectedPermit, setSelectedPermit] = useState(null);
-  const [selectedIncident, setSelectedIncident] = useState(null);
+  const modal = useModal();
   const [stages, setStages] = useState([]);
   const [users, setUsers] = useState([]);
 
@@ -93,7 +60,7 @@ export default function SafetyPage() {
       await api.patch(`/safety/permits/${permit.id}/status`, { status: newStatus });
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -102,7 +69,7 @@ export default function SafetyPage() {
       await api.patch(`/safety/incidents/${incident.id}/status`, { status: newStatus });
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      showError(err.message || 'Failed to update status');
     }
   };
 
@@ -112,7 +79,7 @@ export default function SafetyPage() {
       await api.delete(`/safety/permits/${permit.id}`);
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      showError(err.message || 'Failed to delete');
     }
   };
 
@@ -122,7 +89,7 @@ export default function SafetyPage() {
       await api.delete(`/safety/incidents/${incident.id}`);
       loadData();
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      showError(err.message || 'Failed to delete');
     }
   };
 
@@ -138,9 +105,8 @@ export default function SafetyPage() {
         </div>
         {canCreate && (
           <button onClick={() => {
-            if (activeTab === 'permits') { setSelectedPermit(null); setSelectedIncident(null); }
-            else { setSelectedIncident(null); setSelectedPermit(null); }
-            setShowModal(true);
+            if (activeTab === 'permits') modal.open('permit');
+            else modal.open('incident');
           }}
             className="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700">
             + New {activeTab === 'permits' ? 'Permit' : 'Incident'}
@@ -216,7 +182,7 @@ export default function SafetyPage() {
                         <span className="text-[10px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded">{permit.permit_type}</span>
                       </div>
                       <h3 className="text-sm font-semibold text-slate-800 cursor-pointer hover:text-blue-600"
-                        onClick={() => { setSelectedPermit(permit); setSelectedIncident(null); setShowModal(true); }}>
+                        onClick={() => modal.open('permit', permit)}>
                         {permit.title}
                       </h3>
                       <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400 flex-wrap">
@@ -287,7 +253,7 @@ export default function SafetyPage() {
                         <span className="text-[10px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded">{incident.incident_type}</span>
                       </div>
                       <h3 className="text-sm font-semibold text-slate-800 cursor-pointer hover:text-blue-600"
-                        onClick={() => { setSelectedIncident(incident); setSelectedPermit(null); setShowModal(true); }}>
+                        onClick={() => modal.open('incident', incident)}>
                         {incident.title}
                       </h3>
                       {incident.description && (
@@ -332,25 +298,25 @@ export default function SafetyPage() {
       )}
 
       {/* Permit Modal */}
-      {showModal && activeTab === 'permits' && !selectedIncident && (
+      {modal.isOpen('permit') && (
         <PermitModal
-          permit={selectedPermit}
+          permit={modal.data('permit')}
           projectId={currentProject.id}
           stages={stages}
-          onClose={() => { setShowModal(false); setSelectedPermit(null); }}
-          onSaved={() => { setShowModal(false); setSelectedPermit(null); loadData(); }}
+          onClose={() => modal.close('permit')}
+          onSaved={() => { modal.close('permit'); loadData(); }}
         />
       )}
 
       {/* Incident Modal */}
-      {showModal && (activeTab === 'incidents' || selectedIncident) && !selectedPermit && (
+      {modal.isOpen('incident') && (
         <IncidentModal
-          incident={selectedIncident}
+          incident={modal.data('incident')}
           projectId={currentProject.id}
           stages={stages}
           users={users}
-          onClose={() => { setShowModal(false); setSelectedIncident(null); }}
-          onSaved={() => { setShowModal(false); setSelectedIncident(null); loadData(); }}
+          onClose={() => modal.close('incident')}
+          onSaved={() => { modal.close('incident'); loadData(); }}
         />
       )}
     </div>
@@ -373,8 +339,8 @@ function PermitModal({ permit, projectId, stages, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.title.trim()) return alert('Title is required');
-    if (!form.permit_type) return alert('Permit type is required');
+    if (!form.title.trim()) return showWarning('Title is required');
+    if (!form.permit_type) return showWarning('Permit type is required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -384,7 +350,7 @@ function PermitModal({ permit, projectId, stages, onClose, onSaved }) {
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save permit');
+      showError(err.message || 'Failed to save permit');
     } finally {
       setSaving(false);
     }
@@ -511,8 +477,8 @@ function IncidentModal({ incident, projectId, stages, users, onClose, onSaved })
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.title.trim()) return alert('Title is required');
-    if (!form.incident_type) return alert('Incident type is required');
+    if (!form.title.trim()) return showWarning('Title is required');
+    if (!form.incident_type) return showWarning('Incident type is required');
     setSaving(true);
     try {
       if (isEdit) {
@@ -522,7 +488,7 @@ function IncidentModal({ incident, projectId, stages, users, onClose, onSaved })
       }
       onSaved();
     } catch (err) {
-      alert(err.message || 'Failed to save incident');
+      showError(err.message || 'Failed to save incident');
     } finally {
       setSaving(false);
     }

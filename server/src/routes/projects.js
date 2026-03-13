@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../config/db.js';
 import { requireAuth, requireRole, getUserProjectIds } from '../middleware/auth.js';
 import DEFAULT_STAGE_TASKS from '../config/defaultTasks.js';
+import DEFAULT_SUBSTAGES from '../config/defaultSubstages.js';
 
 const router = Router();
 
@@ -20,14 +21,23 @@ router.get('/', requireAuth, (req, res) => {
     `).all(req.user.id);
   }
 
-  // Add stage counts for each project
-  const stageCountStmt = db.prepare("SELECT COUNT(*) as total, SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as active FROM stages WHERE project_id = ?");
-  const memberCountStmt = db.prepare('SELECT COUNT(*) as c FROM project_members WHERE project_id = ?');
-  for (const p of projects) {
-    const counts = stageCountStmt.get(p.id);
-    p.totalStages = counts?.total || 0;
-    p.activeStages = counts?.active || 0;
-    p.memberCount = memberCountStmt.get(p.id)?.c || 0;
+  // Batch-load stage counts and member counts for all projects
+  if (projects.length > 0) {
+    const pIds = projects.map(p => p.id);
+    const pPh = pIds.map(() => '?').join(',');
+
+    const stageCounts = db.prepare(`SELECT project_id, COUNT(*) as total, SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as active FROM stages WHERE project_id IN (${pPh}) GROUP BY project_id`).all(...pIds);
+    const stageMap = Object.fromEntries(stageCounts.map(r => [r.project_id, r]));
+
+    const memberCounts = db.prepare(`SELECT project_id, COUNT(*) as c FROM project_members WHERE project_id IN (${pPh}) GROUP BY project_id`).all(...pIds);
+    const memberMap = Object.fromEntries(memberCounts.map(r => [r.project_id, r.c]));
+
+    for (const p of projects) {
+      const sc = stageMap[p.id];
+      p.totalStages = sc?.total || 0;
+      p.activeStages = sc?.active || 0;
+      p.memberCount = memberMap[p.id] || 0;
+    }
   }
 
   res.json(projects);
@@ -55,15 +65,15 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // POST /api/projects - Create a new project (owner only)
 router.post('/', requireAuth, requireRole('owner'), (req, res) => {
-  const { name, location, plot_size, start_date, planned_end, total_budget } = req.body;
+  const { name, location, plot_size, start_date, planned_end, total_budget, latitude, longitude } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'Project name is required' });
   }
 
   const result = db.prepare(
-    'INSERT INTO projects (name, location, plot_size, start_date, planned_end, status, total_budget, spent, completion, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?)'
-  ).run(name, location || null, plot_size || null, start_date || null, planned_end || null, 'active', total_budget || 0, req.user.id);
+    'INSERT INTO projects (name, location, plot_size, start_date, planned_end, status, total_budget, spent, completion, latitude, longitude, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?)'
+  ).run(name, location || null, plot_size || null, start_date || null, planned_end || null, 'active', total_budget || 0, latitude || null, longitude || null, req.user.id);
 
   // Create default stages for the new project
   const defaultStages = [
@@ -75,6 +85,8 @@ router.post('/', requireAuth, requireRole('owner'), (req, res) => {
   const projectId = result.lastInsertRowid;
   const insertStage = db.prepare('INSERT INTO stages (project_id, name, stage_order, status) VALUES (?, ?, ?, ?)');
   const insertTask = db.prepare('INSERT INTO tasks (task_code, stage_id, parent_task_id, title, status, priority, is_default, created_by) VALUES (?, ?, ?, ?, ?, ?, 1, ?)');
+  const insertSubstage = db.prepare('INSERT INTO substages (stage_id, name, substage_order, completion, status) VALUES (?, ?, ?, 0, ?)');
+  const insertChecklist = db.prepare('INSERT INTO checklist_items (substage_id, item_order, description, standard_ref, is_mandatory, is_checked) VALUES (?, ?, ?, ?, ?, 0)');
 
   // Get current max task code number
   const lastTask = db.prepare("SELECT task_code FROM tasks ORDER BY id DESC LIMIT 1").get();
@@ -85,7 +97,8 @@ router.post('/', requireAuth, requireRole('owner'), (req, res) => {
   }
 
   for (let i = 0; i < defaultStages.length; i++) {
-    const stageResult = insertStage.run(projectId, defaultStages[i], i + 1, 'pending');
+    const stageOrder = i + 1;
+    const stageResult = insertStage.run(projectId, defaultStages[i], stageOrder, 'pending');
     const stageId = stageResult.lastInsertRowid;
 
     // Create default tasks and subtasks for this stage
@@ -103,6 +116,16 @@ router.post('/', requireAuth, requireRole('owner'), (req, res) => {
         }
       }
     }
+
+    // Create default substages and checklist items for this stage
+    const substages = DEFAULT_SUBSTAGES[stageOrder] || [];
+    substages.forEach((ss, ssIdx) => {
+      const ssResult = insertSubstage.run(stageId, ss.name, ssIdx + 1, 'pending');
+      const ssId = ssResult.lastInsertRowid;
+      ss.checklist.forEach((cl, clIdx) => {
+        insertChecklist.run(ssId, clIdx + 1, cl.item, cl.std, cl.m);
+      });
+    });
   }
 
   const created = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId);
@@ -114,7 +137,7 @@ router.patch('/:id', requireAuth, requireRole('owner'), (req, res) => {
   const project = db.prepare('SELECT * FROM projects WHERE id = ? AND created_by = ?').get(req.params.id, req.user.id);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  const { name, location, plot_size, start_date, planned_end, status, total_budget } = req.body;
+  const { name, location, plot_size, start_date, planned_end, status, total_budget, latitude, longitude } = req.body;
 
   db.prepare(`
     UPDATE projects SET
@@ -124,12 +147,17 @@ router.patch('/:id', requireAuth, requireRole('owner'), (req, res) => {
       start_date = COALESCE(?, start_date),
       planned_end = COALESCE(?, planned_end),
       status = COALESCE(?, status),
-      total_budget = COALESCE(?, total_budget)
+      total_budget = COALESCE(?, total_budget),
+      latitude = COALESCE(?, latitude),
+      longitude = COALESCE(?, longitude)
     WHERE id = ?
   `).run(
     name || null, location || null, plot_size || null,
     start_date || null, planned_end || null, status || null,
-    total_budget !== undefined ? total_budget : null, project.id
+    total_budget !== undefined ? total_budget : null,
+    latitude !== undefined ? latitude : null,
+    longitude !== undefined ? longitude : null,
+    project.id
   );
 
   const updated = db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id);
